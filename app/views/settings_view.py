@@ -1,0 +1,1089 @@
+# app/views/settings_view.py
+import flet as ft
+from app.components.bottom_nav import BottomNav
+import json
+from datetime import datetime
+from app.config.theme import LIGHT_SCHEMES, DARK_SCHEMES, THEME_DESCRIPTIONS, change_theme, PRIMARY_COLORS
+
+
+def SettingsView(page, app_state, scroll_to_appearance=False):
+    """Settings screen"""
+    
+    # Ref for scroll column to auto-scroll to appearance section
+    scroll_column_ref = ft.Ref[ft.Column]()
+    
+    # Dark / Light switch (no label, text is on the left side)
+    dark_switch = ft.Switch(value=app_state.dark_mode)
+
+    def toggle_dark(e):
+        change_theme(page, app_state, None, dark_switch.value)
+        # Rebuild the settings view to apply new colors, scroll to appearance
+        page.views.pop()
+        new_view = SettingsView(page, app_state, scroll_to_appearance=True)
+        page.views.append(new_view)
+        page.snack_bar = ft.SnackBar(content=ft.Text("Appearance updated"))
+        page.snack_bar.open = True
+        page.update()
+        # Scroll to appearance section after update
+        if hasattr(new_view, 'scroll_column_ref') and new_view.scroll_column_ref.current:
+            new_view.scroll_column_ref.current.scroll_to(key="appearance_section", duration=300)
+            page.update()
+
+    dark_switch.on_change = toggle_dark
+
+    # Theme grid using GridView (2 columns)
+    theme_tiles: list[ft.Container] = []
+
+    def select_theme(e):
+        name = e.control.data
+        change_theme(page, app_state, name, None)
+        # Rebuild the settings view to apply new colors, scroll to appearance
+        page.views.pop()
+        new_view = SettingsView(page, app_state, scroll_to_appearance=True)
+        page.views.append(new_view)
+        page.snack_bar = ft.SnackBar(content=ft.Text(f"Theme changed to {name}"))
+        page.snack_bar.open = True
+        page.update()
+        # Scroll to appearance section after update
+        if hasattr(new_view, 'scroll_column_ref') and new_view.scroll_column_ref.current:
+            new_view.scroll_column_ref.current.scroll_to(key="appearance_section", duration=300)
+            page.update()
+
+    # Theme grid - use Column with Rows for better control
+    theme_rows = []
+    theme_names = list(PRIMARY_COLORS.keys())
+    
+    for i in range(0, len(theme_names), 2):
+        row_items = []
+        for j in range(2):
+            if i + j < len(theme_names):
+                name = theme_names[i + j]
+                scheme = LIGHT_SCHEMES[name]
+                is_selected = name == app_state.current_theme
+                # Use the theme's primary color for background tint
+                tile_bg = scheme.primary_container
+                tile = ft.Container(
+                    data=name,
+                    bgcolor=tile_bg,
+                    border_radius=12,
+                    padding=10,
+                    height=70,
+                    expand=True,
+                    border=ft.border.all(3, scheme.primary if is_selected else ft.Colors.TRANSPARENT),
+                    content=ft.Row([
+                        ft.Container(width=24, height=24, bgcolor=scheme.primary, border_radius=12),
+                        ft.Container(width=8),
+                        ft.Column([
+                            ft.Text(name, size=12, weight=ft.FontWeight.BOLD, color=scheme.on_primary_container, overflow=ft.TextOverflow.ELLIPSIS),
+                            ft.Text(THEME_DESCRIPTIONS[name], size=9, color=scheme.on_primary_container, overflow=ft.TextOverflow.ELLIPSIS),
+                        ], spacing=1, expand=True),
+                    ], spacing=0, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    on_click=select_theme,
+                )
+                theme_tiles.append(tile)
+                row_items.append(tile)
+        
+        theme_rows.append(ft.Row(row_items, spacing=10))
+    
+    theme_grid = ft.Column(theme_rows, spacing=10)
+    
+    def sign_out(e):
+        """Sign out user"""
+        app_state.sign_out()
+    
+    def edit_profile(e):
+        """Edit user profile (name, email)"""
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        # Get current user info
+        user = app_state.db.get_user_by_id(app_state.current_user_id)
+        current_name = user['display_name'] if user and 'display_name' in user.keys() and user['display_name'] else ""
+        current_email = app_state.current_user['email']
+        
+        name_field = ft.TextField(
+            label="Display Name",
+            value=current_name,
+            hint_text="Enter your name",
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            label_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        email_field = ft.TextField(
+            label="Email",
+            value=current_email,
+            hint_text="Enter your email",
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            label_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        error_text = ft.Text("", color="#EF4444", size=12, visible=False)
+        
+        def save_profile(e):
+            new_name = name_field.value.strip()
+            new_email = email_field.value.strip()
+            
+            # Validate email
+            if not new_email or '@' not in new_email:
+                error_text.value = "Please enter a valid email"
+                error_text.visible = True
+                page.update()
+                return
+            
+            # Check if email changed and already exists
+            if new_email != current_email:
+                existing = app_state.db.get_user_by_email(new_email)
+                if existing:
+                    error_text.value = "Email already in use"
+                    error_text.visible = True
+                    page.update()
+                    return
+            
+            # Update profile
+            app_state.db.update_user_profile(
+                app_state.current_user_id,
+                display_name=new_name if new_name else None,
+                email=new_email if new_email != current_email else None
+            )
+            
+            # Update current user data
+            if new_email != current_email:
+                app_state.current_user = {'id': app_state.current_user_id, 'email': new_email}
+            
+            # Log the action
+            from app.services.security_logger import security_logger
+            security_logger.log_admin_action(current_email, "profile_update", f"name={new_name}")
+            
+            page.close(dialog)
+            page.snack_bar = ft.SnackBar(ft.Text("Profile updated successfully"))
+            page.snack_bar.open = True
+            # Refresh settings view
+            page.go("/settings")
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Edit Profile", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Container(
+                content=ft.Column([
+                    name_field,
+                    ft.Container(height=10),
+                    email_field,
+                    error_text,
+                ]),
+                width=300,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Save", on_click=save_profile, style=ft.ButtonStyle(color=current_scheme.primary)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def upload_profile_picture(e):
+        """Upload profile picture with validation"""
+        import os
+        from pathlib import Path
+        
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        # Allowed file types and max size
+        ALLOWED_TYPES = ['.jpg', '.jpeg', '.png', '.gif']
+        MAX_SIZE_MB = 2
+        MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024
+        
+        status_text = ft.Text("", size=12, visible=False)
+        preview_image = ft.Container(
+            content=ft.Icon(ft.Icons.PERSON, size=60, color=dialog_muted),
+            width=100,
+            height=100,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_radius=50,
+            alignment=ft.alignment.center,
+        )
+        
+        selected_file = {"path": None, "data": None}
+        
+        def on_file_picked(e: ft.FilePickerResultEvent):
+            if e.files and len(e.files) > 0:
+                file = e.files[0]
+                file_ext = os.path.splitext(file.name)[1].lower()
+                
+                # Validate file type
+                if file_ext not in ALLOWED_TYPES:
+                    status_text.value = f"Invalid file type. Allowed: {', '.join(ALLOWED_TYPES)}"
+                    status_text.color = "#EF4444"
+                    status_text.visible = True
+                    page.update()
+                    return
+                
+                # Validate file size
+                if file.size > MAX_SIZE_BYTES:
+                    status_text.value = f"File too large. Max size: {MAX_SIZE_MB}MB"
+                    status_text.color = "#EF4444"
+                    status_text.visible = True
+                    page.update()
+                    return
+                
+                # Store file info
+                selected_file["path"] = file.path
+                selected_file["name"] = file.name
+                
+                status_text.value = f"Selected: {file.name}"
+                status_text.color = "#10B981"
+                status_text.visible = True
+                page.update()
+        
+        file_picker = ft.FilePicker(on_result=on_file_picked)
+        page.overlay.append(file_picker)
+        page.update()
+        
+        def pick_file(e):
+            file_picker.pick_files(
+                allow_multiple=False,
+                allowed_extensions=['jpg', 'jpeg', 'png', 'gif']
+            )
+        
+        def save_picture(e):
+            if not selected_file["path"]:
+                status_text.value = "Please select an image first"
+                status_text.color = "#EF4444"
+                status_text.visible = True
+                page.update()
+                return
+            
+            try:
+                import shutil
+                
+                # Create avatars directory
+                base_dir = Path(__file__).parent.parent.parent
+                avatars_dir = base_dir / "assets" / "avatars"
+                avatars_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Generate unique filename
+                file_ext = os.path.splitext(selected_file["name"])[1]
+                new_filename = f"user_{app_state.current_user_id}{file_ext}"
+                dest_path = avatars_dir / new_filename
+                
+                # Copy file
+                shutil.copy2(selected_file["path"], dest_path)
+                
+                # Save to database
+                app_state.db.update_profile_picture(app_state.current_user_id, str(dest_path))
+                
+                page.close(dialog)
+                page.snack_bar = ft.SnackBar(ft.Text("Profile picture updated"))
+                page.snack_bar.open = True
+                page.go("/settings")
+                
+            except Exception as ex:
+                status_text.value = f"Error: {str(ex)}"
+                status_text.color = "#EF4444"
+                status_text.visible = True
+                page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Upload Profile Picture", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Container(
+                content=ft.Column([
+                    preview_image,
+                    ft.Container(height=15),
+                    ft.Text(f"Allowed: JPG, PNG, GIF (max {MAX_SIZE_MB}MB)", size=11, color=dialog_muted),
+                    ft.Container(height=10),
+                    ft.ElevatedButton(
+                        "Choose Image",
+                        icon=ft.Icons.UPLOAD_FILE,
+                        on_click=pick_file,
+                    ),
+                    ft.Container(height=5),
+                    status_text,
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                width=280,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Save", on_click=save_picture, style=ft.ButtonStyle(color=current_scheme.primary)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def change_password(e):
+        """Change password with current password verification"""
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        current_pw_field = ft.TextField(
+            label="Current Password",
+            password=True,
+            can_reveal_password=True,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            label_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        new_pw_field = ft.TextField(
+            label="New Password",
+            password=True,
+            can_reveal_password=True,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            label_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        confirm_pw_field = ft.TextField(
+            label="Confirm New Password",
+            password=True,
+            can_reveal_password=True,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            label_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        error_text = ft.Text("", color="#EF4444", size=12, visible=False)
+        
+        # Password requirements display
+        req_length = ft.Text("• At least 8 characters", size=11, color=dialog_muted)
+        req_number = ft.Text("• Contains a number", size=11, color=dialog_muted)
+        req_upper = ft.Text("• Contains uppercase letter", size=11, color=dialog_muted)
+        
+        def update_requirements(e):
+            pw = new_pw_field.value or ""
+            req_length.color = "#10B981" if len(pw) >= 8 else dialog_muted
+            req_number.color = "#10B981" if any(c.isdigit() for c in pw) else dialog_muted
+            req_upper.color = "#10B981" if any(c.isupper() for c in pw) else dialog_muted
+            page.update()
+        
+        new_pw_field.on_change = update_requirements
+        
+        def do_change_password(e):
+            current_pw = current_pw_field.value
+            new_pw = new_pw_field.value
+            confirm_pw = confirm_pw_field.value
+            
+            if not current_pw or not new_pw or not confirm_pw:
+                error_text.value = "All fields are required"
+                error_text.visible = True
+                page.update()
+                return
+            
+            if new_pw != confirm_pw:
+                error_text.value = "New passwords don't match"
+                error_text.visible = True
+                page.update()
+                return
+            
+            # Use auth service to change password (includes validation)
+            success, message = app_state.auth_service.change_password(
+                app_state.current_user_id,
+                current_pw,
+                new_pw
+            )
+            
+            if not success:
+                error_text.value = message
+                error_text.visible = True
+                page.update()
+                return
+            
+            # Log the action
+            from app.services.security_logger import security_logger
+            security_logger.log_password_change(app_state.current_user['email'], app_state.current_user_id)
+            
+            page.close(dialog)
+            page.snack_bar = ft.SnackBar(ft.Text("Password changed successfully"))
+            page.snack_bar.open = True
+            page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Change Password", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Container(
+                content=ft.Column([
+                    current_pw_field,
+                    ft.Container(height=10),
+                    new_pw_field,
+                    ft.Container(height=5),
+                    ft.Column([req_length, req_number, req_upper], spacing=2),
+                    ft.Container(height=10),
+                    confirm_pw_field,
+                    error_text,
+                ]),
+                width=300,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Change", on_click=do_change_password, style=ft.ButtonStyle(color=current_scheme.primary)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+
+    def export_data(e):
+        """Export user data"""
+        # Get all user data
+        habits = app_state.get_my_habits()
+        export_data = {
+            'export_date': datetime.now().isoformat(),
+            'user_email': app_state.current_user['email'],
+            'habits': [],
+        }
+        
+        for habit in habits:
+            completions = app_state.db.get_habit_completions(habit['id'])
+            habit_data = {
+                'name': habit['name'],
+                'frequency': habit['frequency'],
+                'category': habit['category'] if 'category' in habit.keys() else 'Other',
+                'start_date': habit['start_date'],
+                'icon': habit.get('icon', '🎯') if hasattr(habit, 'get') else (habit['icon'] if 'icon' in habit.keys() else '🎯'),
+                'completions': [c['completion_date'] for c in completions]
+            }
+            export_data['habits'].append(habit_data)
+        
+        # Show export dialog with copy functionality
+        export_json = json.dumps(export_data, indent=2)
+        export_text = ft.TextField(
+            value=export_json,
+            multiline=True,
+            min_lines=10,
+            max_lines=15,
+            read_only=True,
+        )
+        
+        # Get current theme colors for dialog
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        def copy_to_clipboard(e):
+            page.set_clipboard(export_json)
+            page.snack_bar = ft.SnackBar(ft.Text("Data copied to clipboard!"))
+            page.snack_bar.open = True
+            page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Export Data", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Copy this data to backup your habits:", size=12, color=dialog_muted),
+                    export_text,
+                ], scroll=ft.ScrollMode.AUTO),
+                height=300,
+                width=400,
+            ),
+            actions=[
+                ft.TextButton("Copy", on_click=copy_to_clipboard, style=ft.ButtonStyle(color=current_scheme.primary)),
+                ft.TextButton("Close", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def reset_data(e):
+        """Reset all data"""
+        # Get current theme colors for dialog
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        def confirm_reset(e):
+            # Delete all habits
+            habits = app_state.get_my_habits()
+            for habit in habits:
+                app_state.habit_service.delete_habit(habit['id'])
+            
+            page.close(dialog)
+            page.snack_bar = ft.SnackBar(ft.Text("All data has been reset"))
+            page.snack_bar.open = True
+            app_state.notify_habit_changed()
+            page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Reset All Data?", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Text(
+                "This will permanently delete all habits and progress. This action cannot be undone.",
+                color=dialog_muted,
+                size=14,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Reset", on_click=confirm_reset, style=ft.ButtonStyle(color=ft.Colors.RED)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def delete_account(e):
+        """Delete user account permanently"""
+        # Get current theme colors for dialog
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        # Password confirmation field
+        password_field = ft.TextField(
+            hint_text="Enter your password to confirm",
+            password=True,
+            can_reveal_password=True,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            hint_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        error_text = ft.Text("", color="#EF4444", size=12, visible=False)
+        
+        def confirm_delete(e):
+            # Verify password first
+            if not password_field.value:
+                error_text.value = "Please enter your password"
+                error_text.visible = True
+                page.update()
+                return
+            
+            # Check password
+            user = app_state.db.get_user_by_email(app_state.current_user['email'])
+            if not app_state.auth_service.verify_password(password_field.value, user['password_hash']):
+                error_text.value = "Incorrect password"
+                error_text.visible = True
+                page.update()
+                return
+            
+            # Delete user account
+            user_id = app_state.current_user_id
+            app_state.db.delete_user(user_id)
+            
+            # Log the deletion
+            from app.services.security_logger import security_logger
+            security_logger.log_data_deletion(app_state.current_user['email'], user_id, "account")
+            
+            # Sign out and close dialog
+            page.close(dialog)
+            app_state.current_user = None
+            app_state.current_user_id = None
+            page.snack_bar = ft.SnackBar(ft.Text("Account deleted successfully"))
+            page.snack_bar.open = True
+            page.go("/")
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=None,
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.WARNING_ROUNDED, size=32, color="#EF4444"),
+                        bgcolor=ft.Colors.with_opacity(0.1, "#EF4444"),
+                        border_radius=50,
+                        padding=12,
+                    ),
+                    ft.Container(height=16),
+                    ft.Text("Delete Account?", size=20, weight=ft.FontWeight.W_600, color=dialog_text),
+                    ft.Container(height=8),
+                    ft.Text(
+                        "This will permanently delete your account and all data. This action cannot be undone.",
+                        size=13,
+                        color=dialog_muted,
+                        text_align=ft.TextAlign.CENTER,
+                    ),
+                    ft.Container(height=16),
+                    password_field,
+                    error_text,
+                    ft.Container(height=16),
+                    ft.Row([
+                        ft.Container(
+                            content=ft.Text("Cancel", size=14, color=dialog_muted),
+                            on_click=lambda e: page.close(dialog),
+                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                        ),
+                        ft.Container(
+                            content=ft.Text("Delete Account", size=14, weight=ft.FontWeight.W_500, color="#FFFFFF"),
+                            bgcolor="#EF4444",
+                            border_radius=8,
+                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
+                            on_click=confirm_delete,
+                        ),
+                    ], alignment=ft.MainAxisAlignment.END, spacing=8),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                width=300,
+                padding=24,
+            ),
+            actions=[],
+            actions_padding=0,
+            content_padding=0,
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def import_data(e):
+        """Import user data from JSON"""
+        # Get current theme colors for dialog
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        import_text = ft.TextField(
+            hint_text="Paste your exported JSON data here...",
+            multiline=True,
+            min_lines=8,
+            max_lines=12,
+            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
+            border_color=dialog_muted,
+            color=dialog_text,
+            hint_style=ft.TextStyle(color=dialog_muted),
+        )
+        
+        def do_import(e):
+            try:
+                data = json.loads(import_text.value)
+                imported_count = 0
+                
+                for habit_data in data.get('habits', []):
+                    # Create habit
+                    result = app_state.habit_service.create_habit(
+                        user_id=app_state.current_user_id,
+                        name=habit_data.get('name', 'Imported Habit'),
+                        frequency=habit_data.get('frequency', 'Daily'),
+                        category=habit_data.get('category', 'Other'),
+                        icon=habit_data.get('icon', '🎯'),
+                    )
+                    
+                    if result.get('success') and result.get('habit_id'):
+                        habit_id = result['habit_id']
+                        # Add completions
+                        for comp_date in habit_data.get('completions', []):
+                            try:
+                                from datetime import datetime
+                                date_obj = datetime.strptime(comp_date, '%Y-%m-%d').date()
+                                app_state.habit_service.toggle_completion(habit_id, date_obj)
+                            except:
+                                pass
+                        imported_count += 1
+                
+                page.close(dialog)
+                page.snack_bar = ft.SnackBar(ft.Text(f"Successfully imported {imported_count} habits!"))
+                page.snack_bar.open = True
+                app_state.notify_habit_changed()
+                page.update()
+                
+            except json.JSONDecodeError:
+                page.snack_bar = ft.SnackBar(ft.Text("Invalid JSON format. Please check your data."))
+                page.snack_bar.open = True
+                page.update()
+            except Exception as ex:
+                page.snack_bar = ft.SnackBar(ft.Text(f"Import failed: {str(ex)}"))
+                page.snack_bar.open = True
+                page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Import Data", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Paste the exported JSON data below:", size=12, color=dialog_muted),
+                    import_text,
+                ], scroll=ft.ScrollMode.AUTO),
+                height=300,
+                width=400,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Import", on_click=do_import, style=ft.ButtonStyle(color=current_scheme.primary)),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        
+        page.open(dialog)
+    
+    def close_dialog(dialog):
+        page.close(dialog)
+    
+    # Get storage info
+    stats = app_state.get_overall_stats()
+    
+    # Get current theme colors (with fallback to Default)
+    theme_name = app_state.current_theme if app_state.current_theme in LIGHT_SCHEMES else "Default"
+    current_scheme = DARK_SCHEMES[theme_name] if app_state.dark_mode else LIGHT_SCHEMES[theme_name]
+    bg_color = current_scheme.background
+    surface_color = current_scheme.surface
+    text_color = current_scheme.on_background
+    # Muted color: much darker in light mode for better visibility, lighter in dark mode
+    muted_color = "#374151" if not app_state.dark_mode else "#9CA3AF"
+    # Use theme primary color for borders like in stats
+    border_color = current_scheme.primary
+    
+    view = ft.View(
+        "/settings",
+        controls=[
+            ft.Column(
+                controls=[
+                    ft.Container(
+                        content=ft.Column([
+                            # Header
+                            ft.Container(
+                                content=ft.Text("Settings", size=28, weight=ft.FontWeight.BOLD, color=text_color),
+                                padding=20,
+                            ),
+                            
+                            # Settings content
+                            ft.Container(
+                                content=ft.Column([
+                                    # Profile section
+                                    ft.Container(
+                                        content=ft.Column([
+                                            ft.Text("Profile", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Container(height=10),
+                                            
+                                            # Edit Profile
+                                            ft.Row([
+                                                ft.Icon(ft.Icons.EDIT, size=20, color=muted_color),
+                                                ft.Column([
+                                                    ft.Text("Edit Profile", size=12, color=muted_color),
+                                                    ft.Text("Update your name and email", size=11, color=muted_color),
+                                                ], spacing=2, expand=True),
+                                                ft.OutlinedButton(
+                                                    content=ft.Text("Edit", size=14),
+                                                    on_click=edit_profile,
+                                                ),
+                                            ], spacing=10),
+                                            
+                                            ft.Container(height=15),
+                                            
+                                            # Profile Picture
+                                            ft.Row([
+                                                ft.Icon(ft.Icons.PHOTO_CAMERA, size=20, color=muted_color),
+                                                ft.Column([
+                                                    ft.Text("Profile Picture", size=12, color=muted_color),
+                                                    ft.Text("Upload an avatar image", size=11, color=muted_color),
+                                                ], spacing=2, expand=True),
+                                                ft.OutlinedButton(
+                                                    content=ft.Text("Upload", size=14),
+                                                    on_click=upload_profile_picture,
+                                                ),
+                                            ], spacing=10),
+                                            
+                                            ft.Container(height=15),
+                                            
+                                            # Change Password
+                                            ft.Row([
+                                                ft.Icon(ft.Icons.LOCK, size=20, color=muted_color),
+                                                ft.Column([
+                                                    ft.Text("Change Password", size=12, color=muted_color),
+                                                    ft.Text("Update your account password", size=11, color=muted_color),
+                                                ], spacing=2, expand=True),
+                                                ft.OutlinedButton(
+                                                    content=ft.Text("Change", size=14),
+                                                    on_click=change_password,
+                                                ),
+                                            ], spacing=10),
+                                        ]),
+                                        bgcolor=surface_color,
+                                        border=ft.border.all(1.5, border_color),
+                                        padding=20,
+                                        border_radius=12,
+                                    ),
+                                    
+                                    ft.Container(height=15),
+                                    
+                                    # Account section
+                                    ft.Container(
+                                        content=ft.Column([
+                                            ft.Text("Account", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                    ft.Container(height=10),
+                                    # Display Name
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.BADGE, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Display Name", size=12, color=muted_color),
+                                            ft.Text(
+                                                (lambda: (
+                                                    u['display_name'] if u and 'display_name' in u.keys() and u['display_name'] 
+                                                    else "Not set"
+                                                ) if (u := app_state.db.get_user_by_id(app_state.current_user_id)) else "Not set")(),
+                                                size=14,
+                                                color=text_color,
+                                            ),
+                                        ], spacing=2, expand=True),
+                                    ], spacing=10),
+                                    ft.Container(height=10),
+                                    # Email
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.EMAIL, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Email", size=12, color=muted_color),
+                                            ft.Text(
+                                                app_state.current_user['email'] if app_state.current_user else "",
+                                                size=14,
+                                                color=text_color,
+                                            ),
+                                        ], spacing=2, expand=True),
+                                    ], spacing=10),
+                                    ft.Container(height=10),
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.LOGOUT, size=20, color="#EF4444"),
+                                        ft.Column([
+                                            ft.Text("Sign Out", size=12, color="#EF4444"),
+                                            ft.Text("Log out of your account", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                        ft.OutlinedButton(
+                                            content=ft.Text("Sign Out", size=14, color="#EF4444"),
+                                            on_click=sign_out,
+                                            style=ft.ButtonStyle(
+                                                side=ft.BorderSide(1, "#EF4444"),
+                                            ),
+                                        ),
+                                    ], spacing=10),
+                                ]),
+                                bgcolor=surface_color,
+                                border=ft.border.all(1.5, border_color),
+                                padding=20,
+                                border_radius=12,
+                            ),
+                            
+                            ft.Container(height=15),
+                            
+                            # Appearance section - with key for scrolling
+                            ft.Container(
+                                key="appearance_section",
+                                content=ft.Column([
+                                    ft.Text("Appearance", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                    ft.Container(height=10),
+                                    
+                                    # Appearance controls - Dark mode toggle
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.DARK_MODE, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Dark / Light Mode", size=12, color=muted_color),
+                                            ft.Text("Toggle application brightness", size=11, color=muted_color),
+                                        ], spacing=2),
+                                        ft.Container(expand=True),  # Spacer
+                                        dark_switch,
+                                    ], spacing=10, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+
+                                    ft.Container(height=15),
+
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.PALETTE, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Theme Colors", size=12, color=muted_color),
+                                            ft.Text("Select a color style", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                    ], spacing=10),
+                                    theme_grid,
+                                    
+                                    ft.Container(height=15),
+                                    
+                                    # Live preview placeholder (could be expanded later)
+                                    ft.Text("Preview", size=12, weight="bold", color=text_color),
+                                    ft.Container(height=5),
+                                    ft.Container(
+                                        content=ft.Row([
+                                            ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN, size=20),
+                                            ft.Text("Theme applied successfully", size=12, color=muted_color),
+                                        ]),
+                                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.BLACK),
+                                        padding=12,
+                                        border_radius=8,
+                                    ),
+                                ]),
+                                bgcolor=surface_color,
+                                border=ft.border.all(1.5, border_color),
+                                padding=20,
+                                border_radius=12,
+                            ),
+                            
+                            ft.Container(height=15),
+                            
+                            # Data Management section
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text("Data Management", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                    ft.Container(height=10),
+                                    
+                                    # Export
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.DOWNLOAD, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Export Data", size=12, color=muted_color),
+                                            ft.Text("Download your habits and progress", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                        ft.OutlinedButton(
+                                            content=ft.Text("Export", size=14),
+                                            on_click=export_data,
+                                        ),
+                                    ], spacing=10),
+                                    
+                                    ft.Container(height=15),
+                                    
+                                    # Import
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.UPLOAD, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Import Data", size=12, color=muted_color),
+                                            ft.Text("Restore from a backup file", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                        ft.OutlinedButton(
+                                            content=ft.Text("Import", size=14),
+                                            on_click=lambda e: import_data(e),
+                                        ),
+                                    ], spacing=10),
+                                    
+                                    ft.Container(height=15),
+                                    
+                                    # Reset
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.DELETE_FOREVER, size=20, color="#EF4444"),
+                                        ft.Column([
+                                            ft.Text("Reset All Data", size=12, color="#EF4444"),
+                                            ft.Text("Permanently delete all habits and progress", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                        ft.OutlinedButton(
+                                            content=ft.Text("Reset", size=14, color="#EF4444"),
+                                            on_click=reset_data,
+                                        ),
+                                    ], spacing=10),
+                                    
+                                    ft.Container(height=15),
+                                    ft.Divider(height=1, color=border_color),
+                                    ft.Container(height=15),
+                                    
+                                    # Delete Account
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.PERSON_OFF, size=20, color="#DC2626"),
+                                        ft.Column([
+                                            ft.Text("Delete Account", size=12, color="#DC2626", weight=ft.FontWeight.W_600),
+                                            ft.Text("Permanently delete your account and all data", size=11, color=muted_color),
+                                        ], spacing=2, expand=True),
+                                        ft.ElevatedButton(
+                                            content=ft.Text("Delete", size=14, color="#FFFFFF"),
+                                            bgcolor="#DC2626",
+                                            on_click=delete_account,
+                                        ),
+                                    ], spacing=10),
+                                ]),
+                                bgcolor=surface_color,
+                                border=ft.border.all(1.5, border_color),
+                                padding=20,
+                                border_radius=12,
+                            ),
+                            
+                            ft.Container(height=15),
+                            
+                            # Storage Information
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text("Storage Information", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                    ft.Container(height=10),
+                                    ft.Row([
+                                        ft.Text("Total Habits", size=12, color=muted_color, expand=True),
+                                        ft.Text(str(stats['total_habits']), size=14, weight="bold", color=text_color),
+                                    ]),
+                                    ft.Row([
+                                        ft.Text("Total Completions", size=12, color=muted_color, expand=True),
+                                        ft.Text(str(stats['total_completions']), size=14, weight="bold", color=text_color),
+                                    ]),
+                                    ft.Row([
+                                        ft.Text("Storage Location", size=12, color=muted_color, expand=True),
+                                        ft.Text("Local Device", size=14, weight="bold", color=text_color),
+                                    ]),
+                                ]),
+                                bgcolor=surface_color,
+                                border=ft.border.all(1.5, border_color),
+                                padding=20,
+                                border_radius=12,
+                            ),
+                            
+                            ft.Container(height=15),
+                            
+                            # About section
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text("About HabitFlow", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                    ft.Container(height=10),
+                                    ft.Row([
+                                        ft.Icon(ft.Icons.INFO_OUTLINE, size=20, color=muted_color),
+                                        ft.Column([
+                                            ft.Text("Version 1.0.0", size=12, color=muted_color),
+                                            ft.Text("Track your habits. Stay consistent.", size=11, color=muted_color),
+                                        ], spacing=2),
+                                    ], spacing=10),
+                                    ft.Container(height=10),
+                                    ft.Text(
+                                        "HabitFlow helps you build better habits through consistent tracking and progress visualization.",
+                                        size=12,
+                                        color=muted_color,
+                                    ),
+                                    ft.Container(height=5),
+                                    ft.Text(
+                                        "All your data is stored locally on your device and secured.",
+                                        size=11,
+                                        color=muted_color,
+                                    ),
+                                ]),
+                                bgcolor=surface_color,
+                                border=ft.border.all(1.5, border_color),
+                                padding=20,
+                                border_radius=12,
+                            ),
+                            
+                            # Bottom padding to account for navigation bar
+                            ft.Container(height=80),
+                        ], scroll=ft.ScrollMode.AUTO, ref=scroll_column_ref),
+                        padding=ft.padding.only(left=20, right=20),
+                        expand=True,
+                    ),
+                ], spacing=0),
+                expand=True,
+                bgcolor=bg_color,
+            ),
+            
+            # Bottom navigation
+            BottomNav(page, app_state, current="settings", on_add_click=app_state.open_add_habit_dialog),
+        ],
+        spacing=0,
+        expand=True,
+    ),
+        ],
+        bgcolor=bg_color,
+        padding=0,
+    )
+    
+    # Store the scroll_column_ref and scroll_to_appearance flag for post-render scrolling
+    view.scroll_column_ref = scroll_column_ref
+    view.scroll_to_appearance = scroll_to_appearance
+    
+    return view
