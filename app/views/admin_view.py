@@ -33,27 +33,40 @@ def AdminView(page: ft.Page, app_state):
     
     def sign_out(e):
         app_state.sign_out()
-        page.go("/")
     
     def delete_user(user_id, user_email):
         """Delete a user and their data"""
         def confirm_delete(e):
-            # Delete user's habits first
-            habits = app_state.db.get_user_habits(user_id)
-            for habit in habits:
-                app_state.habit_service.delete_habit(habit['id'])
-            
-            # Delete user
-            if hasattr(app_state.db, 'delete_user'):
-                app_state.db.delete_user(user_id)
-            
-            page.close(dialog)
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(f"User {user_email} deleted", color="#FFFFFF"),
-                bgcolor="#EF4444",
-            )
-            page.snack_bar.open = True
-            page.go("/admin")  # Refresh
+            try:
+                # Delete user's habits first
+                habits = app_state.db.get_user_habits(user_id)
+                for habit in habits:
+                    app_state.habit_service.delete_habit(habit['id'])
+                
+                # Delete user
+                if hasattr(app_state.db, 'delete_user'):
+                    app_state.db.delete_user(user_id)
+                
+                page.close(dialog)
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"User {user_email} deleted", color="#FFFFFF"),
+                    bgcolor="#EF4444",
+                )
+                page.snack_bar.open = True
+                page.update()
+                
+                # Refresh admin view by rebuilding
+                page.go("/today")
+                page.update()
+                page.go("/admin")
+            except Exception as ex:
+                page.close(dialog)
+                page.snack_bar = ft.SnackBar(
+                    content=ft.Text(f"Error deleting user: {str(ex)}", color="#FFFFFF"),
+                    bgcolor="#EF4444",
+                )
+                page.snack_bar.open = True
+                page.update()
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -270,11 +283,10 @@ def AdminView(page: ft.Page, app_state):
                         ft.IconButton(
                             ft.Icons.DELETE_OUTLINE,
                             icon_size=18,
-                            icon_color="#EF4444" if not is_admin else muted_color,
-                            on_click=lambda e, uid=user['id'], uemail=user['email']: delete_user(uid, uemail) if not app_state.is_admin_email(uemail) else None,
-                            tooltip="Delete user" if not is_admin else "Cannot delete admin",
-                            disabled=is_admin,
-                            visible=not is_admin,  # Hide delete button for admin users too
+                            icon_color="#EF4444",
+                            on_click=lambda e, uid=user['id'], uemail=user['email']: delete_user(uid, uemail),
+                            tooltip="Delete user",
+                            visible=not is_admin,  # Hide delete button for admin users
                         ),
                     ], spacing=0),
                 ], spacing=12),
