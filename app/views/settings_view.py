@@ -92,26 +92,13 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         app_state.sign_out()
     
     def edit_profile(e):
-        """Edit user profile (name, email)"""
+        """Edit user email"""
         current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
         dialog_bg = current_scheme.surface
         dialog_text = current_scheme.on_surface
         dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
         
-        # Get current user info
-        user = app_state.db.get_user_by_id(app_state.current_user_id)
-        current_name = user['display_name'] if user and 'display_name' in user.keys() and user['display_name'] else ""
         current_email = app_state.current_user['email']
-        
-        name_field = ft.TextField(
-            label="Display Name",
-            value=current_name,
-            hint_text="Enter your name",
-            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
-            border_color=dialog_muted,
-            color=dialog_text,
-            label_style=ft.TextStyle(color=dialog_muted),
-        )
         
         email_field = ft.TextField(
             label="Email",
@@ -126,7 +113,6 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         error_text = ft.Text("", color="#EF4444", size=12, visible=False)
         
         def save_profile(e):
-            new_name = name_field.value.strip()
             new_email = email_field.value.strip()
             
             # Validate email
@@ -144,24 +130,22 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                     error_text.visible = True
                     page.update()
                     return
-            
-            # Update profile
-            app_state.db.update_user_profile(
-                app_state.current_user_id,
-                display_name=new_name if new_name else None,
-                email=new_email if new_email != current_email else None
-            )
-            
-            # Update current user data
-            if new_email != current_email:
+                
+                # Update email
+                app_state.db.update_user_profile(
+                    app_state.current_user_id,
+                    email=new_email
+                )
+                
+                # Update current user data
                 app_state.current_user = {'id': app_state.current_user_id, 'email': new_email}
-            
-            # Log the action
-            from app.services.security_logger import security_logger
-            security_logger.log_admin_action(current_email, "profile_update", f"name={new_name}")
+                
+                # Log the action
+                from app.services.security_logger import security_logger
+                security_logger.log_admin_action(current_email, "email_update", f"new_email={new_email}")
             
             page.close(dialog)
-            page.snack_bar = ft.SnackBar(ft.Text("Profile updated successfully"))
+            page.snack_bar = ft.SnackBar(ft.Text("Email updated successfully"))
             page.snack_bar.open = True
             # Refresh settings view
             page.go("/settings")
@@ -169,11 +153,9 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=dialog_bg,
-            title=ft.Text("Edit Profile", color=dialog_text, weight=ft.FontWeight.W_600),
+            title=ft.Text("Edit Email", color=dialog_text, weight=ft.FontWeight.W_600),
             content=ft.Container(
                 content=ft.Column([
-                    name_field,
-                    ft.Container(height=10),
                     email_field,
                     error_text,
                 ]),
@@ -762,41 +744,11 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                             # Settings content
                             ft.Container(
                                 content=ft.Column([
-                                    # Profile section
+                                    # Security section
                                     ft.Container(
                                         content=ft.Column([
-                                            ft.Text("Profile", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Text("Security", size=16, weight=ft.FontWeight.BOLD, color=text_color),
                                             ft.Container(height=10),
-                                            
-                                            # Edit Profile
-                                            ft.Row([
-                                                ft.Icon(ft.Icons.EDIT, size=20, color=muted_color),
-                                                ft.Column([
-                                                    ft.Text("Edit Profile", size=12, color=muted_color),
-                                                    ft.Text("Update your name and email", size=11, color=muted_color),
-                                                ], spacing=2, expand=True),
-                                                ft.OutlinedButton(
-                                                    content=ft.Text("Edit", size=14),
-                                                    on_click=edit_profile,
-                                                ),
-                                            ], spacing=10),
-                                            
-                                            ft.Container(height=15),
-                                            
-                                            # Profile Picture
-                                            ft.Row([
-                                                ft.Icon(ft.Icons.PHOTO_CAMERA, size=20, color=muted_color),
-                                                ft.Column([
-                                                    ft.Text("Profile Picture", size=12, color=muted_color),
-                                                    ft.Text("Upload an avatar image", size=11, color=muted_color),
-                                                ], spacing=2, expand=True),
-                                                ft.OutlinedButton(
-                                                    content=ft.Text("Upload", size=14),
-                                                    on_click=upload_profile_picture,
-                                                ),
-                                            ], spacing=10),
-                                            
-                                            ft.Container(height=15),
                                             
                                             # Change Password
                                             ft.Row([
@@ -824,33 +776,23 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                         content=ft.Column([
                                             ft.Text("Account", size=16, weight=ft.FontWeight.BOLD, color=text_color),
                                     ft.Container(height=10),
-                                    # Display Name
-                                    ft.Row([
-                                        ft.Icon(ft.Icons.BADGE, size=20, color=muted_color),
-                                        ft.Column([
-                                            ft.Text("Display Name", size=12, color=muted_color),
-                                            ft.Text(
-                                                (lambda: (
-                                                    u['display_name'] if u and 'display_name' in u.keys() and u['display_name'] 
-                                                    else "Not set"
-                                                ) if (u := app_state.db.get_user_by_id(app_state.current_user_id)) else "Not set")(),
-                                                size=14,
-                                                color=text_color,
-                                            ),
-                                        ], spacing=2, expand=True),
-                                    ], spacing=10),
-                                    ft.Container(height=10),
-                                    # Email
+                                    # Email with edit icon
                                     ft.Row([
                                         ft.Icon(ft.Icons.EMAIL, size=20, color=muted_color),
                                         ft.Column([
-                                            ft.Text("Email", size=12, color=muted_color),
                                             ft.Text(
                                                 app_state.current_user['email'] if app_state.current_user else "",
                                                 size=14,
                                                 color=text_color,
                                             ),
                                         ], spacing=2, expand=True),
+                                        ft.IconButton(
+                                            ft.Icons.EDIT,
+                                            icon_size=18,
+                                            icon_color=muted_color,
+                                            tooltip="Edit profile",
+                                            on_click=edit_profile,
+                                        ),
                                     ], spacing=10),
                                     ft.Container(height=10),
                                     ft.Row([
