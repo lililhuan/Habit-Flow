@@ -101,13 +101,15 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         current_email = app_state.current_user['email']
         
         email_field = ft.TextField(
-            label="Email",
             value=current_email,
             hint_text="Enter your email",
-            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
-            border_color=dialog_muted,
+            bgcolor=ft.Colors.with_opacity(0.05, dialog_muted),
+            border_color=ft.Colors.with_opacity(0.3, dialog_muted),
             color=dialog_text,
-            label_style=ft.TextStyle(color=dialog_muted),
+            hint_style=ft.TextStyle(color=dialog_muted),
+            focused_border_color=current_scheme.primary,
+            cursor_color=current_scheme.primary,
+            text_size=14,
         )
         
         error_text = ft.Text("", color="#EF4444", size=12, visible=False)
@@ -115,14 +117,12 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         def save_profile(e):
             new_email = email_field.value.strip()
             
-            # Validate email
             if not new_email or '@' not in new_email:
                 error_text.value = "Please enter a valid email"
                 error_text.visible = True
                 page.update()
                 return
             
-            # Check if email changed and already exists
             if new_email != current_email:
                 existing = app_state.db.get_user_by_email(new_email)
                 if existing:
@@ -131,36 +131,31 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                     page.update()
                     return
                 
-                # Update email
-                app_state.db.update_user_profile(
-                    app_state.current_user_id,
-                    email=new_email
-                )
-                
-                # Update current user data
+                app_state.db.update_user_profile(app_state.current_user_id, email=new_email)
                 app_state.current_user = {'id': app_state.current_user_id, 'email': new_email}
                 
-                # Log the action
                 from app.services.security_logger import security_logger
                 security_logger.log_admin_action(current_email, "email_update", f"new_email={new_email}")
             
             page.close(dialog)
-            page.snack_bar = ft.SnackBar(ft.Text("Email updated successfully"))
+            page.snack_bar = ft.SnackBar(ft.Text("Email updated"))
             page.snack_bar.open = True
-            # Refresh settings view
             page.go("/settings")
         
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=dialog_bg,
-            title=ft.Text("Edit Email", color=dialog_text, weight=ft.FontWeight.W_600),
-            content=ft.Container(
-                content=ft.Column([
-                    email_field,
-                    error_text,
-                ]),
-                width=300,
-            ),
+            title=ft.Text("Edit Email?", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Column([
+                ft.Text(
+                    "Update your account email address.",
+                    size=14,
+                    color=dialog_muted,
+                ),
+                ft.Container(height=12),
+                email_field,
+                error_text,
+            ], spacing=0, tight=True),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
                 ft.TextButton("Save", on_click=save_profile, style=ft.ButtonStyle(color=current_scheme.primary)),
@@ -312,47 +307,56 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
         
         current_pw_field = ft.TextField(
-            label="Current Password",
+            hint_text="Current password",
             password=True,
             can_reveal_password=True,
-            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
-            border_color=dialog_muted,
+            bgcolor=ft.Colors.with_opacity(0.05, dialog_muted),
+            border_color=ft.Colors.with_opacity(0.3, dialog_muted),
             color=dialog_text,
-            label_style=ft.TextStyle(color=dialog_muted),
+            hint_style=ft.TextStyle(color=dialog_muted),
+            focused_border_color=current_scheme.primary,
+            cursor_color=current_scheme.primary,
+            text_size=14,
         )
         
         new_pw_field = ft.TextField(
-            label="New Password",
+            hint_text="New password",
             password=True,
             can_reveal_password=True,
-            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
-            border_color=dialog_muted,
+            bgcolor=ft.Colors.with_opacity(0.05, dialog_muted),
+            border_color=ft.Colors.with_opacity(0.3, dialog_muted),
             color=dialog_text,
-            label_style=ft.TextStyle(color=dialog_muted),
+            hint_style=ft.TextStyle(color=dialog_muted),
+            focused_border_color=current_scheme.primary,
+            cursor_color=current_scheme.primary,
+            text_size=14,
         )
         
         confirm_pw_field = ft.TextField(
-            label="Confirm New Password",
+            hint_text="Confirm new password",
             password=True,
             can_reveal_password=True,
-            bgcolor=ft.Colors.with_opacity(0.1, dialog_muted),
-            border_color=dialog_muted,
+            bgcolor=ft.Colors.with_opacity(0.05, dialog_muted),
+            border_color=ft.Colors.with_opacity(0.3, dialog_muted),
             color=dialog_text,
-            label_style=ft.TextStyle(color=dialog_muted),
+            hint_style=ft.TextStyle(color=dialog_muted),
+            focused_border_color=current_scheme.primary,
+            cursor_color=current_scheme.primary,
+            text_size=14,
         )
         
         error_text = ft.Text("", color="#EF4444", size=12, visible=False)
         
-        # Password requirements display
+        # Password requirements
         req_length = ft.Text("• At least 8 characters", size=11, color=dialog_muted)
         req_number = ft.Text("• Contains a number", size=11, color=dialog_muted)
         req_upper = ft.Text("• Contains uppercase letter", size=11, color=dialog_muted)
         
         def update_requirements(e):
             pw = new_pw_field.value or ""
-            req_length.color = "#10B981" if len(pw) >= 8 else dialog_muted
-            req_number.color = "#10B981" if any(c.isdigit() for c in pw) else dialog_muted
-            req_upper.color = "#10B981" if any(c.isupper() for c in pw) else dialog_muted
+            req_length.color = current_scheme.primary if len(pw) >= 8 else dialog_muted
+            req_number.color = current_scheme.primary if any(c.isdigit() for c in pw) else dialog_muted
+            req_upper.color = current_scheme.primary if any(c.isupper() for c in pw) else dialog_muted
             page.update()
         
         new_pw_field.on_change = update_requirements
@@ -369,16 +373,13 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                 return
             
             if new_pw != confirm_pw:
-                error_text.value = "New passwords don't match"
+                error_text.value = "Passwords don't match"
                 error_text.visible = True
                 page.update()
                 return
             
-            # Use auth service to change password (includes validation)
             success, message = app_state.auth_service.change_password(
-                app_state.current_user_id,
-                current_pw,
-                new_pw
+                app_state.current_user_id, current_pw, new_pw
             )
             
             if not success:
@@ -387,32 +388,34 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                 page.update()
                 return
             
-            # Log the action
             from app.services.security_logger import security_logger
             security_logger.log_password_change(app_state.current_user['email'], app_state.current_user_id)
             
             page.close(dialog)
-            page.snack_bar = ft.SnackBar(ft.Text("Password changed successfully"))
+            page.snack_bar = ft.SnackBar(ft.Text("Password changed"))
             page.snack_bar.open = True
             page.update()
         
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=dialog_bg,
-            title=ft.Text("Change Password", color=dialog_text, weight=ft.FontWeight.W_600),
-            content=ft.Container(
-                content=ft.Column([
-                    current_pw_field,
-                    ft.Container(height=10),
-                    new_pw_field,
-                    ft.Container(height=5),
-                    ft.Column([req_length, req_number, req_upper], spacing=2),
-                    ft.Container(height=10),
-                    confirm_pw_field,
-                    error_text,
-                ]),
-                width=300,
-            ),
+            title=ft.Text("Change Password?", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Column([
+                ft.Text(
+                    "Create a new password for your account.",
+                    size=14,
+                    color=dialog_muted,
+                ),
+                ft.Container(height=12),
+                current_pw_field,
+                ft.Container(height=8),
+                new_pw_field,
+                ft.Container(height=4),
+                ft.Column([req_length, req_number, req_upper], spacing=2),
+                ft.Container(height=8),
+                confirm_pw_field,
+                error_text,
+            ], spacing=0, tight=True),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
                 ft.TextButton("Change", on_click=do_change_password, style=ft.ButtonStyle(color=current_scheme.primary)),
@@ -581,49 +584,21 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=dialog_bg,
-            title=None,
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.WARNING_ROUNDED, size=32, color="#EF4444"),
-                        bgcolor=ft.Colors.with_opacity(0.1, "#EF4444"),
-                        border_radius=50,
-                        padding=12,
-                    ),
-                    ft.Container(height=16),
-                    ft.Text("Delete Account?", size=20, weight=ft.FontWeight.W_600, color=dialog_text),
-                    ft.Container(height=8),
-                    ft.Text(
-                        "This will permanently delete your account and all data. This action cannot be undone.",
-                        size=13,
-                        color=dialog_muted,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=16),
-                    password_field,
-                    error_text,
-                    ft.Container(height=16),
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Text("Cancel", size=14, color=dialog_muted),
-                            on_click=lambda e: page.close(dialog),
-                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                        ),
-                        ft.Container(
-                            content=ft.Text("Delete Account", size=14, weight=ft.FontWeight.W_500, color="#FFFFFF"),
-                            bgcolor="#EF4444",
-                            border_radius=8,
-                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                            on_click=confirm_delete,
-                        ),
-                    ], alignment=ft.MainAxisAlignment.END, spacing=8),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                width=300,
-                padding=24,
-            ),
-            actions=[],
-            actions_padding=0,
-            content_padding=0,
+            title=ft.Text("Delete Account?", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Column([
+                ft.Text(
+                    "This will permanently delete your account and all data. This action cannot be undone.",
+                    size=14,
+                    color=dialog_muted,
+                ),
+                ft.Container(height=12),
+                password_field,
+                error_text,
+            ], spacing=0, tight=True),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Delete", on_click=confirm_delete, style=ft.ButtonStyle(color="#EF4444")),
+            ],
             shape=ft.RoundedRectangleBorder(radius=16),
         )
         
@@ -744,6 +719,53 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                             # Settings content
                             ft.Container(
                                 content=ft.Column([
+                                    # Account section
+                                    ft.Container(
+                                        content=ft.Column([
+                                            ft.Text("Account", size=16, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Container(height=10),
+                                            # Email with edit icon
+                                            ft.Row([
+                                                ft.Icon(ft.Icons.EMAIL, size=20, color=muted_color),
+                                                ft.Column([
+                                                    ft.Text(
+                                                        app_state.current_user['email'] if app_state.current_user else "",
+                                                        size=14,
+                                                        color=text_color,
+                                                    ),
+                                                ], spacing=2, expand=True),
+                                                ft.IconButton(
+                                                    ft.Icons.EDIT,
+                                                    icon_size=18,
+                                                    icon_color=muted_color,
+                                                    tooltip="Edit email",
+                                                    on_click=edit_profile,
+                                                ),
+                                            ], spacing=10),
+                                            ft.Container(height=10),
+                                            ft.Row([
+                                                ft.Icon(ft.Icons.LOGOUT, size=20, color="#EF4444"),
+                                                ft.Column([
+                                                    ft.Text("Sign Out", size=12, color="#EF4444"),
+                                                    ft.Text("Log out of your account", size=11, color=muted_color),
+                                                ], spacing=2, expand=True),
+                                                ft.OutlinedButton(
+                                                    content=ft.Text("Sign Out", size=14, color="#EF4444"),
+                                                    on_click=sign_out,
+                                                    style=ft.ButtonStyle(
+                                                        side=ft.BorderSide(1, "#EF4444"),
+                                                    ),
+                                                ),
+                                            ], spacing=10),
+                                        ]),
+                                        bgcolor=surface_color,
+                                        border=ft.border.all(1.5, border_color),
+                                        padding=20,
+                                        border_radius=12,
+                                    ),
+                                    
+                                    ft.Container(height=15),
+                                    
                                     # Security section
                                     ft.Container(
                                         content=ft.Column([
@@ -770,53 +792,6 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                     ),
                                     
                                     ft.Container(height=15),
-                                    
-                                    # Account section
-                                    ft.Container(
-                                        content=ft.Column([
-                                            ft.Text("Account", size=16, weight=ft.FontWeight.BOLD, color=text_color),
-                                    ft.Container(height=10),
-                                    # Email with edit icon
-                                    ft.Row([
-                                        ft.Icon(ft.Icons.EMAIL, size=20, color=muted_color),
-                                        ft.Column([
-                                            ft.Text(
-                                                app_state.current_user['email'] if app_state.current_user else "",
-                                                size=14,
-                                                color=text_color,
-                                            ),
-                                        ], spacing=2, expand=True),
-                                        ft.IconButton(
-                                            ft.Icons.EDIT,
-                                            icon_size=18,
-                                            icon_color=muted_color,
-                                            tooltip="Edit profile",
-                                            on_click=edit_profile,
-                                        ),
-                                    ], spacing=10),
-                                    ft.Container(height=10),
-                                    ft.Row([
-                                        ft.Icon(ft.Icons.LOGOUT, size=20, color="#EF4444"),
-                                        ft.Column([
-                                            ft.Text("Sign Out", size=12, color="#EF4444"),
-                                            ft.Text("Log out of your account", size=11, color=muted_color),
-                                        ], spacing=2, expand=True),
-                                        ft.OutlinedButton(
-                                            content=ft.Text("Sign Out", size=14, color="#EF4444"),
-                                            on_click=sign_out,
-                                            style=ft.ButtonStyle(
-                                                side=ft.BorderSide(1, "#EF4444"),
-                                            ),
-                                        ),
-                                    ], spacing=10),
-                                ]),
-                                bgcolor=surface_color,
-                                border=ft.border.all(1.5, border_color),
-                                padding=20,
-                                border_radius=12,
-                            ),
-                            
-                            ft.Container(height=15),
                             
                             # Appearance section - with key for scrolling
                             ft.Container(
