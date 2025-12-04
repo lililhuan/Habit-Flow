@@ -1,6 +1,7 @@
 # app/views/admin_view.py - Admin Dashboard
 import flet as ft
 from datetime import date, datetime
+import json
 from app.config.theme import LIGHT_SCHEMES, DARK_SCHEMES, get_current_scheme
 from app.services.security_logger import security_logger
 
@@ -19,20 +20,31 @@ def AdminView(page: ft.Page, app_state):
     # Get all users
     all_users = app_state.db.get_all_users() if hasattr(app_state.db, 'get_all_users') else []
     
-    # Calculate app-wide stats
+    # Calculate app-wide stats (exclude admin users from habit counts)
     total_users = len(all_users)
     total_habits = 0
     total_completions = 0
+    active_users = 0
     
     for user in all_users:
-        habits = app_state.db.get_user_habits(user['id'])
-        total_habits += len(habits)
-        for habit in habits:
-            completions = app_state.db.get_habit_completions(habit['id'])
-            total_completions += len(completions)
+        is_admin_user = app_state.is_admin_email(user['email'])
+        if not is_admin_user:
+            habits = app_state.db.get_user_habits(user['id'])
+            total_habits += len(habits)
+            for habit in habits:
+                completions = app_state.db.get_habit_completions(habit['id'])
+                total_completions += len(completions)
+            # Count as active if not disabled
+            is_disabled = app_state.db.is_user_disabled(user['id']) if hasattr(app_state.db, 'is_user_disabled') else False
+            if not is_disabled:
+                active_users += 1
     
     def sign_out(e):
         app_state.sign_out()
+    
+    def go_to_app(e):
+        """Navigate to main app (Today view)"""
+        page.go("/today")
     
     def delete_user(user_id, user_email):
         """Delete a user and their data"""
@@ -71,46 +83,16 @@ def AdminView(page: ft.Page, app_state):
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=surface_color,
-            title=None,
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Container(
-                        content=ft.Icon(ft.Icons.WARNING_ROUNDED, size=32, color="#EF4444"),
-                        bgcolor=ft.Colors.with_opacity(0.1, "#EF4444"),
-                        border_radius=50,
-                        padding=12,
-                    ),
-                    ft.Container(height=16),
-                    ft.Text("Delete User?", size=20, weight=ft.FontWeight.W_600, color=text_color),
-                    ft.Container(height=8),
-                    ft.Text(
-                        f"Delete {user_email} and all their data?",
-                        size=13,
-                        color=muted_color,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Container(height=24),
-                    ft.Row([
-                        ft.Container(
-                            content=ft.Text("Cancel", size=14, color=muted_color),
-                            on_click=lambda e: page.close(dialog),
-                            padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                        ),
-                        ft.Container(
-                            content=ft.Text("Delete", size=14, weight=ft.FontWeight.W_500, color="#FFFFFF"),
-                            bgcolor="#EF4444",
-                            border_radius=8,
-                            padding=ft.padding.symmetric(horizontal=24, vertical=10),
-                            on_click=confirm_delete,
-                        ),
-                    ], alignment=ft.MainAxisAlignment.END, spacing=8),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                width=280,
-                padding=24,
+            title=ft.Text("Delete User?", color=text_color, weight=ft.FontWeight.W_600),
+            content=ft.Text(
+                f"This will permanently delete {user_email} and all their data. This action cannot be undone.",
+                color=muted_color,
+                size=14,
             ),
-            actions=[],
-            actions_padding=0,
-            content_padding=0,
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=muted_color)),
+                ft.TextButton("Delete", on_click=confirm_delete, style=ft.ButtonStyle(color="#EF4444")),
+            ],
             shape=ft.RoundedRectangleBorder(radius=16),
         )
         
@@ -118,60 +100,34 @@ def AdminView(page: ft.Page, app_state):
     
     def view_user_details(user):
         """View user details in a dialog"""
-        habits = app_state.db.get_user_habits(user['id'])
-        habit_count = len(habits)
-        completion_count = sum(len(app_state.db.get_habit_completions(h['id'])) for h in habits)
+        is_admin_user = app_state.is_admin_email(user['email'])
+        
+        # Only get habit info for non-admin users
+        if not is_admin_user:
+            habits = app_state.db.get_user_habits(user['id'])
+            habit_count = len(habits)
+            completion_count = sum(len(app_state.db.get_habit_completions(h['id'])) for h in habits)
+            stats_row = ft.Row([
+                ft.Text(f"{habit_count} habits", size=13, color=primary_color),
+                ft.Text("•", size=13, color=muted_color),
+                ft.Text(f"{completion_count} completions", size=13, color="#10B981"),
+            ], spacing=8)
+        else:
+            stats_row = ft.Text("Administrator account", size=13, color="#F59E0B")
         
         dialog = ft.AlertDialog(
             modal=True,
             bgcolor=surface_color,
-            title=None,
-            content=ft.Container(
-                content=ft.Column([
-                    # User avatar
-                    ft.Container(
-                        content=ft.Text(
-                            user['email'][0].upper(),
-                            size=24,
-                            weight=ft.FontWeight.BOLD,
-                            color="#FFFFFF",
-                        ),
-                        width=60,
-                        height=60,
-                        bgcolor=primary_color,
-                        border_radius=30,
-                        alignment=ft.alignment.center,
-                    ),
-                    ft.Container(height=16),
-                    ft.Text(user['email'], size=16, weight=ft.FontWeight.W_600, color=text_color),
-                    ft.Container(height=4),
-                    ft.Text(f"User ID: {user['id']}", size=12, color=muted_color),
-                    ft.Container(height=20),
-                    # Stats
-                    ft.Row([
-                        ft.Column([
-                            ft.Text(str(habit_count), size=24, weight=ft.FontWeight.BOLD, color=primary_color),
-                            ft.Text("Habits", size=11, color=muted_color),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                        ft.Container(width=40),
-                        ft.Column([
-                            ft.Text(str(completion_count), size=24, weight=ft.FontWeight.BOLD, color="#10B981"),
-                            ft.Text("Completions", size=11, color=muted_color),
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=2),
-                    ], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Container(height=24),
-                    ft.Container(
-                        content=ft.Text("Close", size=14, color=muted_color),
-                        on_click=lambda e: page.close(dialog),
-                        padding=ft.padding.symmetric(horizontal=20, vertical=10),
-                    ),
-                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
-                width=280,
-                padding=24,
-            ),
-            actions=[],
-            actions_padding=0,
-            content_padding=0,
+            title=ft.Text("User Details", color=text_color, weight=ft.FontWeight.W_600),
+            content=ft.Column([
+                ft.Text(user['email'], size=14, color=text_color),
+                ft.Text(f"ID: {user['id']}", size=12, color=muted_color),
+                ft.Container(height=12),
+                stats_row,
+            ], spacing=4, tight=True),
+            actions=[
+                ft.TextButton("Close", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=muted_color)),
+            ],
             shape=ft.RoundedRectangleBorder(radius=16),
         )
         
@@ -241,6 +197,8 @@ def AdminView(page: ft.Page, app_state):
                                 size=14,
                                 weight=ft.FontWeight.W_500,
                                 color=muted_color if is_disabled else text_color,
+                                overflow=ft.TextOverflow.ELLIPSIS,
+                                expand=True,
                             ),
                             ft.Container(
                                 content=ft.Text("ADMIN", size=9, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
@@ -258,42 +216,44 @@ def AdminView(page: ft.Page, app_state):
                             ),
                         ], spacing=8),
                         ft.Text(
-                            f"{user['email']} • {len(user_habits)} habits" if display_name else f"{len(user_habits)} habits",
+                            "Admin account" if is_admin else (f"{user['email']} • {len(user_habits)} habits" if display_name else f"{len(user_habits)} habits"),
                             size=12, 
-                            color=muted_color
+                            color=muted_color,
+                            overflow=ft.TextOverflow.ELLIPSIS,
                         ),
                     ], spacing=2, expand=True),
-                    # Actions
+                    # Actions - compact with no overflow
                     ft.Row([
                         ft.IconButton(
                             ft.Icons.VISIBILITY_OUTLINED,
-                            icon_size=18,
+                            icon_size=16,
                             icon_color=muted_color,
                             on_click=lambda e, u=user: view_user_details(u),
                             tooltip="View details",
+                            style=ft.ButtonStyle(padding=4),
                         ),
                         ft.IconButton(
                             ft.Icons.BLOCK if not is_disabled else ft.Icons.CHECK_CIRCLE_OUTLINE,
-                            icon_size=18,
+                            icon_size=16,
                             icon_color="#F59E0B" if not is_disabled else "#10B981",
                             on_click=lambda e, uid=user['id'], uemail=user['email'], dis=is_disabled: toggle_user_status(uid, uemail, dis),
                             tooltip="Disable user" if not is_disabled else "Enable user",
-                            visible=not is_admin,  # Hide for admin users (can't disable admins)
+                            visible=not is_admin,
+                            style=ft.ButtonStyle(padding=4),
                         ),
                         ft.IconButton(
                             ft.Icons.DELETE_OUTLINE,
-                            icon_size=18,
+                            icon_size=16,
                             icon_color="#EF4444",
                             on_click=lambda e, uid=user['id'], uemail=user['email']: delete_user(uid, uemail),
                             tooltip="Delete user",
-                            visible=not is_admin,  # Hide delete button for admin users
+                            visible=not is_admin,
+                            style=ft.ButtonStyle(padding=4),
                         ),
-                    ], spacing=0),
-                ], spacing=12),
-                bgcolor=surface_color,
-                border_radius=12,
-                padding=16,
-                margin=ft.margin.only(bottom=8),
+                    ], spacing=0, tight=True),
+                ], spacing=8),
+                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.1, muted_color))),
+                padding=ft.padding.only(left=4, right=4, top=8, bottom=8),
             )
         )
     
@@ -351,13 +311,32 @@ def AdminView(page: ft.Page, app_state):
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
                 padding=40,
                 alignment=ft.alignment.center,
+                expand=True,
             )
         
         return ft.Column(
             controls=log_entries,
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
+            expand=True,
         )
+    
+    def export_logs(e):
+        """Export security logs to clipboard"""
+        logs = security_logger.get_recent_logs(100)
+        export_data = {
+            "export_date": datetime.now().isoformat(),
+            "exported_by": app_state.current_user['email'],
+            "logs": logs
+        }
+        export_json = json.dumps(export_data, indent=2)
+        page.set_clipboard(export_json)
+        page.snack_bar = ft.SnackBar(
+            content=ft.Text("Logs copied to clipboard!", color="#FFFFFF"),
+            bgcolor="#10B981",
+        )
+        page.snack_bar.open = True
+        page.update()
     
     # Build activity/login history list
     def build_activity_logs():
@@ -417,17 +396,25 @@ def AdminView(page: ft.Page, app_state):
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
                 padding=40,
                 alignment=ft.alignment.center,
+                expand=True,
             )
         
         return ft.Column(
             controls=activity_entries,
             spacing=0,
             scroll=ft.ScrollMode.AUTO,
+            expand=True,
         )
     
     # Tab state
     current_tab = {"value": 0}
     
+    def refresh_admin(e):
+        """Refresh the admin view by rebuilding it"""
+        # Simply navigate to trigger a rebuild
+        page.go("/")
+        page.go("/admin")
+
     def switch_tab(index):
         current_tab["value"] = index
         tabs_container.content = build_tab_content(index)
@@ -441,49 +428,100 @@ def AdminView(page: ft.Page, app_state):
     
     def build_tab_content(index):
         if index == 0:
-            return ft.Column([
-                ft.Text("All Users", size=18, weight=ft.FontWeight.W_600, color=text_color),
-                ft.Container(height=12),
-                ft.Column(
-                    controls=user_cards if user_cards else [
-                        ft.Text("No users found", color=muted_color),
-                    ],
-                    spacing=0,
-                    scroll=ft.ScrollMode.AUTO,
-                ),
-            ])
+            return ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text("All Users", size=16, weight=ft.FontWeight.W_600, color=text_color),
+                        ft.Container(expand=True),
+                        ft.IconButton(
+                            ft.Icons.REFRESH_OUTLINED,
+                            icon_size=18,
+                            icon_color=muted_color,
+                            on_click=refresh_admin,
+                            tooltip="Refresh",
+                        ),
+                    ]),
+                    ft.Container(height=8),
+                    ft.Container(
+                        content=ft.Column(
+                            controls=user_cards if user_cards else [
+                                ft.Container(
+                                    content=ft.Column([
+                                        ft.Icon(ft.Icons.PEOPLE_OUTLINED, size=40, color=muted_color),
+                                        ft.Text("No users found", size=13, color=muted_color),
+                                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                                    padding=30,
+                                    alignment=ft.alignment.center,
+                                )
+                            ],
+                            spacing=0,
+                            scroll=ft.ScrollMode.AUTO,
+                        ),
+                        expand=True,
+                    ),
+                ], expand=True),
+                bgcolor=surface_color,
+                border_radius=12,
+                padding=16,
+                expand=True,
+            )
         elif index == 1:
-            return ft.Column([
-                ft.Row([
-                    ft.Text("Login Activity", size=18, weight=ft.FontWeight.W_600, color=text_color),
-                    ft.Container(expand=True),
-                    ft.IconButton(
-                        ft.Icons.REFRESH,
-                        icon_size=18,
-                        icon_color=muted_color,
-                        on_click=lambda e: switch_tab(1),
-                        tooltip="Refresh",
+            return ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text("Login Activity", size=16, weight=ft.FontWeight.W_600, color=text_color),
+                        ft.Container(expand=True),
+                        ft.IconButton(
+                            ft.Icons.REFRESH_OUTLINED,
+                            icon_size=18,
+                            icon_color=muted_color,
+                            on_click=refresh_admin,
+                            tooltip="Refresh",
+                        ),
+                    ]),
+                    ft.Container(height=8),
+                    ft.Container(
+                        content=build_activity_logs(),
+                        expand=True,
                     ),
-                ]),
-                ft.Container(height=12),
-                build_activity_logs(),
-            ])
+                ], expand=True),
+                bgcolor=surface_color,
+                border_radius=12,
+                padding=16,
+                expand=True,
+            )
         else:
-            return ft.Column([
-                ft.Row([
-                    ft.Text("Security Audit Log", size=18, weight=ft.FontWeight.W_600, color=text_color),
-                    ft.Container(expand=True),
-                    ft.IconButton(
-                        ft.Icons.REFRESH,
-                        icon_size=18,
-                        icon_color=muted_color,
-                        on_click=lambda e: switch_tab(2),
-                        tooltip="Refresh logs",
+            return ft.Container(
+                content=ft.Column([
+                    ft.Row([
+                        ft.Text("Security Logs", size=16, weight=ft.FontWeight.W_600, color=text_color),
+                        ft.Container(expand=True),
+                        ft.IconButton(
+                            ft.Icons.DOWNLOAD_OUTLINED,
+                            icon_size=18,
+                            icon_color=muted_color,
+                            on_click=export_logs,
+                            tooltip="Export logs",
+                        ),
+                        ft.IconButton(
+                            ft.Icons.REFRESH_OUTLINED,
+                            icon_size=18,
+                            icon_color=muted_color,
+                            on_click=refresh_admin,
+                            tooltip="Refresh",
+                        ),
+                    ]),
+                    ft.Container(height=8),
+                    ft.Container(
+                        content=build_security_logs(),
+                        expand=True,
                     ),
-                ]),
-                ft.Container(height=12),
-                build_security_logs(),
-            ])
+                ], expand=True),
+                bgcolor=surface_color,
+                border_radius=12,
+                padding=16,
+                expand=True,
+            )
     
     # Tab buttons
     tab_users = ft.Container(
@@ -520,63 +558,103 @@ def AdminView(page: ft.Page, app_state):
         controls=[
             ft.Container(
                 content=ft.Column([
-                    # Header
+                    # Header - minimalist with Back to App button
                     ft.Container(
                         content=ft.Row([
-                            ft.Column([
-                                ft.Text("Admin Dashboard", size=28, weight=ft.FontWeight.BOLD, color=text_color),
-                                ft.Text(f"Logged in as {app_state.current_user['email']}", size=12, color=muted_color),
+                            ft.Text("Admin Dashboard", size=24, weight=ft.FontWeight.BOLD, color=text_color),
+                            ft.Row([
+                                ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.HOME_OUTLINED, size=16, color=primary_color),
+                                        ft.Text("App", size=13, color=primary_color),
+                                    ], spacing=4),
+                                    on_click=go_to_app,
+                                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                                    border=ft.border.all(1, primary_color),
+                                    border_radius=8,
+                                    tooltip="Go to main app",
+                                ),
+                                ft.IconButton(
+                                    ft.Icons.LOGOUT_OUTLINED,
+                                    icon_size=20,
+                                    icon_color="#EF4444",
+                                    on_click=sign_out,
+                                    tooltip="Sign Out",
+                                ),
                             ], spacing=4),
-                            ft.IconButton(
-                                ft.Icons.LOGOUT,
-                                icon_color="#EF4444",
-                                on_click=sign_out,
-                                tooltip="Sign Out",
-                            ),
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        padding=20,
+                        padding=ft.padding.only(left=20, right=12, top=20, bottom=12),
                     ),
                     
-                    # Stats Cards
+                    # Stats Cards - minimalist style like main app
                     ft.Container(
-                        content=ft.Row([
-                            # Total Users
-                            ft.Container(
-                                content=ft.Column([
-                                    ft.Icon(ft.Icons.PEOPLE_OUTLINED, size=24, color=primary_color),
-                                    ft.Text(str(total_users), size=28, weight=ft.FontWeight.BOLD, color=text_color),
-                                    ft.Text("Users", size=12, color=muted_color),
-                                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-                                bgcolor=surface_color,
-                                border_radius=16,
-                                padding=20,
-                                expand=True,
-                            ),
-                            # Total Habits
-                            ft.Container(
-                                content=ft.Column([
-                                    ft.Icon(ft.Icons.FLAG_OUTLINED, size=24, color="#10B981"),
-                                    ft.Text(str(total_habits), size=28, weight=ft.FontWeight.BOLD, color=text_color),
-                                    ft.Text("Habits", size=12, color=muted_color),
-                                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-                                bgcolor=surface_color,
-                                border_radius=16,
-                                padding=20,
-                                expand=True,
-                            ),
-                            # Total Completions
-                            ft.Container(
-                                content=ft.Column([
-                                    ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINED, size=24, color="#8B5CF6"),
-                                    ft.Text(str(total_completions), size=28, weight=ft.FontWeight.BOLD, color=text_color),
-                                    ft.Text("Done", size=12, color=muted_color),
-                                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
-                                bgcolor=surface_color,
-                                border_radius=16,
-                                padding=20,
-                                expand=True,
-                            ),
-                        ], spacing=12),
+                        content=ft.Column([
+                            ft.Row([
+                                # Total Users card
+                                ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.PEOPLE_OUTLINED, size=20, color=primary_color),
+                                        ft.Container(expand=True),
+                                        ft.Column([
+                                            ft.Text(str(total_users), size=20, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Text("Users", size=11, color=muted_color),
+                                        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+                                    ]),
+                                    bgcolor=surface_color,
+                                    border_radius=12,
+                                    padding=16,
+                                    expand=True,
+                                ),
+                                # Total Habits card
+                                ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.FLAG_OUTLINED, size=20, color="#10B981"),
+                                        ft.Container(expand=True),
+                                        ft.Column([
+                                            ft.Text(str(total_habits), size=20, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Text("Habits", size=11, color=muted_color),
+                                        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+                                    ]),
+                                    bgcolor=surface_color,
+                                    border_radius=12,
+                                    padding=16,
+                                    expand=True,
+                                ),
+                            ], spacing=10),
+                            ft.Container(height=10),
+                            ft.Row([
+                                # Total Completions card
+                                ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINED, size=20, color="#8B5CF6"),
+                                        ft.Container(expand=True),
+                                        ft.Column([
+                                            ft.Text(str(total_completions), size=20, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Text("Done", size=11, color=muted_color),
+                                        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+                                    ]),
+                                    bgcolor=surface_color,
+                                    border_radius=12,
+                                    padding=16,
+                                    expand=True,
+                                ),
+                                # Active Users card (excluding admins)
+                                ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.PERSON_OUTLINED, size=20, color="#10B981"),
+                                        ft.Container(expand=True),
+                                        ft.Column([
+                                            ft.Text(str(active_users), size=20, weight=ft.FontWeight.BOLD, color=text_color),
+                                            ft.Text("Active", size=11, color=muted_color),
+                                        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
+                                    ]),
+                                    bgcolor=surface_color,
+                                    border_radius=12,
+                                    padding=16,
+                                    expand=True,
+                                ),
+                            ], spacing=10),
+                        ], spacing=0),
                         padding=ft.padding.symmetric(horizontal=20),
                     ),
                     
@@ -597,7 +675,7 @@ def AdminView(page: ft.Page, app_state):
                     # Tab Content
                     ft.Container(
                         content=tabs_container,
-                        padding=ft.padding.symmetric(horizontal=20),
+                        padding=ft.padding.only(left=20, right=20, bottom=20),
                         expand=True,
                     ),
                 ], spacing=0, expand=True),
