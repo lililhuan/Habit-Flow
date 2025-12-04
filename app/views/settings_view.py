@@ -140,6 +140,8 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
             page.close(dialog)
             page.snack_bar = ft.SnackBar(ft.Text("Email updated"))
             page.snack_bar.open = True
+            # Force refresh by navigating away and back
+            page.go("/today")
             page.go("/settings")
         
         dialog = ft.AlertDialog(
@@ -780,8 +782,11 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                                     ft.Text("Update your account password", size=11, color=muted_color),
                                                 ], spacing=2, expand=True),
                                                 ft.OutlinedButton(
-                                                    content=ft.Text("Change", size=14),
+                                                    content=ft.Text("Change", size=14, color=text_color),
                                                     on_click=change_password,
+                                                    style=ft.ButtonStyle(
+                                                        side=ft.BorderSide(1, muted_color),
+                                                    ),
                                                 ),
                                             ], spacing=10),
                                         ]),
@@ -859,8 +864,11 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                             ft.Text("Download your habits and progress", size=11, color=muted_color),
                                         ], spacing=2, expand=True),
                                         ft.OutlinedButton(
-                                            content=ft.Text("Export", size=14),
+                                            content=ft.Text("Export", size=14, color=text_color),
                                             on_click=export_data,
+                                            style=ft.ButtonStyle(
+                                                side=ft.BorderSide(1, muted_color),
+                                            ),
                                         ),
                                     ], spacing=10),
                                     
@@ -874,8 +882,11 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                             ft.Text("Restore from a backup file", size=11, color=muted_color),
                                         ], spacing=2, expand=True),
                                         ft.OutlinedButton(
-                                            content=ft.Text("Import", size=14),
+                                            content=ft.Text("Import", size=14, color=text_color),
                                             on_click=lambda e: import_data(e),
+                                            style=ft.ButtonStyle(
+                                                side=ft.BorderSide(1, muted_color),
+                                            ),
                                         ),
                                     ], spacing=10),
                                     
@@ -891,6 +902,9 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                                         ft.OutlinedButton(
                                             content=ft.Text("Reset", size=14, color="#EF4444"),
                                             on_click=reset_data,
+                                            style=ft.ButtonStyle(
+                                                side=ft.BorderSide(1, "#EF4444"),
+                                            ),
                                         ),
                                     ], spacing=10),
                                     
