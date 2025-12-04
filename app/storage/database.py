@@ -1,11 +1,14 @@
 # app/storage/database.py
 import sqlite3
 import os
+import threading
 from datetime import datetime
 from pathlib import Path
 
 
 class Database:
+    _local = threading.local()
+    
     def __init__(self, db_path=None):
         # Always save database in the same folder as this file (app/storage/)
         # Go up two levels to reach habitflow folder
@@ -13,15 +16,14 @@ class Database:
             base_dir = Path(__file__).parent.parent.parent  # habitflow folder
             db_path = base_dir / "habitflow.db"
         self.db_path = str(db_path)
-        self.conn = None
         self.init_database()
     
     def get_connection(self):
-        """Get or create database connection"""
-        if self.conn is None:
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            self.conn.row_factory = sqlite3.Row
-        return self.conn
+        """Get a thread-local database connection"""
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            self._local.conn = sqlite3.connect(self.db_path)
+            self._local.conn.row_factory = sqlite3.Row
+        return self._local.conn
     
     def init_database(self):
         """Initialize database tables"""
