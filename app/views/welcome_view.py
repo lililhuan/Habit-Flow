@@ -69,13 +69,13 @@ def WelcomeView(page, app_state):
                         ft.Container(
                             content=ft.Icon(
                                 ft.Icons.ALBUM_ROUNDED,
-                                size=64,
+                                size=56,
                                 color=scheme.on_primary,
                             ),
-                            width=100,
-                            height=100,
+                            width=90,
+                            height=90,
                             bgcolor=scheme.primary,
-                            border_radius=24,
+                            border_radius=22,
                             alignment=ft.alignment.center,
                             shadow=ft.BoxShadow(
                                 spread_radius=0,

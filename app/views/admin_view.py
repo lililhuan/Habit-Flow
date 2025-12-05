@@ -40,7 +40,32 @@ def AdminView(page: ft.Page, app_state):
                 active_users += 1
     
     def sign_out(e):
-        app_state.sign_out()
+        """Sign out admin with confirmation dialog"""
+        
+        def close_and_logout(e):
+            page.close(logout_dialog)
+            page.update()
+            app_state.sign_out()
+        
+        def cancel_logout(e):
+            page.close(logout_dialog)
+        
+        logout_dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=surface_color,
+            title=ft.Text("Sign Out?", color=text_color, weight=ft.FontWeight.W_600),
+            content=ft.Text(
+                "Are you sure you want to sign out from admin?",
+                color=muted_color,
+                size=14,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=cancel_logout, style=ft.ButtonStyle(color=muted_color)),
+                ft.TextButton("Sign Out", on_click=close_and_logout, style=ft.ButtonStyle(color="#EF4444")),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        page.open(logout_dialog)
     
     def go_to_app(e):
         """Navigate to main app (Today view)"""
@@ -251,9 +276,12 @@ def AdminView(page: ft.Page, app_state):
                             style=ft.ButtonStyle(padding=4),
                         ),
                     ], spacing=0, tight=True),
-                ], spacing=8),
-                border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.1, muted_color))),
-                padding=ft.padding.only(left=4, right=4, top=8, bottom=8),
+                ], spacing=12),
+                bgcolor=surface_color,
+                border=ft.border.all(1, ft.Colors.with_opacity(0.2, muted_color)),
+                border_radius=12,
+                padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                margin=ft.margin.only(bottom=8),
             )
         )
     
@@ -284,22 +312,29 @@ def AdminView(page: ft.Page, app_state):
                 log_entries.append(
                     ft.Container(
                         content=ft.Row([
-                            ft.Icon(icon, size=18, color=level_color),
+                            ft.Container(
+                                content=ft.Icon(icon, size=16, color="#FFFFFF"),
+                                width=32,
+                                height=32,
+                                bgcolor=level_color,
+                                border_radius=8,
+                                alignment=ft.alignment.center,
+                            ),
                             ft.Column([
                                 ft.Text(event_info, size=12, color=text_color, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS),
                                 ft.Text(timestamp, size=10, color=muted_color),
                             ], spacing=2, expand=True),
                             ft.Container(
-                                content=ft.Text(level, size=9, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                                bgcolor=level_color,
+                                content=ft.Text(level, size=9, weight=ft.FontWeight.BOLD, color=level_color),
+                                bgcolor=ft.Colors.with_opacity(0.1, level_color),
                                 border_radius=4,
-                                padding=ft.padding.symmetric(horizontal=6, vertical=2),
+                                padding=ft.padding.symmetric(horizontal=8, vertical=3),
                             ),
-                        ], spacing=12),
-                        bgcolor=surface_color,
-                        border_radius=8,
-                        padding=12,
-                        margin=ft.margin.only(bottom=6),
+                        ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                        border=ft.border.all(1, ft.Colors.with_opacity(0.15, muted_color)),
+                        border_radius=10,
+                        padding=10,
+                        margin=ft.margin.only(bottom=8),
                     )
                 )
         
@@ -365,26 +400,33 @@ def AdminView(page: ft.Page, app_state):
             activity_entries.append(
                 ft.Container(
                     content=ft.Row([
-                        ft.Icon(
-                            ft.Icons.CHECK_CIRCLE if success else ft.Icons.CANCEL,
-                            size=18,
-                            color=status_color
+                        ft.Container(
+                            content=ft.Icon(
+                                ft.Icons.CHECK_CIRCLE if success else ft.Icons.CANCEL,
+                                size=16,
+                                color="#FFFFFF"
+                            ),
+                            width=32,
+                            height=32,
+                            bgcolor=status_color,
+                            border_radius=8,
+                            alignment=ft.alignment.center,
                         ),
                         ft.Column([
                             ft.Text(email, size=13, color=text_color, weight=ft.FontWeight.W_500),
                             ft.Text(time_str, size=11, color=muted_color),
                         ], spacing=2, expand=True),
                         ft.Container(
-                            content=ft.Text(status_text, size=10, weight=ft.FontWeight.BOLD, color="#FFFFFF"),
-                            bgcolor=status_color,
+                            content=ft.Text(status_text, size=10, weight=ft.FontWeight.BOLD, color=status_color),
+                            bgcolor=ft.Colors.with_opacity(0.1, status_color),
                             border_radius=4,
                             padding=ft.padding.symmetric(horizontal=8, vertical=3),
                         ),
-                    ], spacing=12),
-                    bgcolor=surface_color,
-                    border_radius=8,
-                    padding=12,
-                    margin=ft.margin.only(bottom=6),
+                    ], spacing=12, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                    border=ft.border.all(1, ft.Colors.with_opacity(0.15, muted_color)),
+                    border_radius=10,
+                    padding=10,
+                    margin=ft.margin.only(bottom=8),
                 )
             )
         
@@ -461,6 +503,7 @@ def AdminView(page: ft.Page, app_state):
                     ),
                 ], expand=True),
                 bgcolor=surface_color,
+                border=ft.border.all(1.5, primary_color),
                 border_radius=12,
                 padding=16,
                 expand=True,
@@ -486,6 +529,7 @@ def AdminView(page: ft.Page, app_state):
                     ),
                 ], expand=True),
                 bgcolor=surface_color,
+                border=ft.border.all(1.5, primary_color),
                 border_radius=12,
                 padding=16,
                 expand=True,
@@ -518,6 +562,7 @@ def AdminView(page: ft.Page, app_state):
                     ),
                 ], expand=True),
                 bgcolor=surface_color,
+                border=ft.border.all(1.5, primary_color),
                 border_radius=12,
                 padding=16,
                 expand=True,
@@ -558,35 +603,47 @@ def AdminView(page: ft.Page, app_state):
         controls=[
             ft.Container(
                 content=ft.Column([
-                    # Header - minimalist with Back to App button
+                    # Header - responsive for mobile
                     ft.Container(
-                        content=ft.Row([
-                            ft.Text("Admin Dashboard", size=24, weight=ft.FontWeight.BOLD, color=text_color),
+                        content=ft.Column([
                             ft.Row([
-                                ft.Container(
-                                    content=ft.Row([
-                                        ft.Icon(ft.Icons.HOME_OUTLINED, size=16, color=primary_color),
-                                        ft.Text("App", size=13, color=primary_color),
-                                    ], spacing=4),
-                                    on_click=go_to_app,
-                                    padding=ft.padding.symmetric(horizontal=12, vertical=6),
-                                    border=ft.border.all(1, primary_color),
-                                    border_radius=8,
-                                    tooltip="Go to main app",
-                                ),
-                                ft.IconButton(
-                                    ft.Icons.LOGOUT_OUTLINED,
-                                    icon_size=20,
-                                    icon_color="#EF4444",
-                                    on_click=sign_out,
-                                    tooltip="Sign Out",
-                                ),
-                            ], spacing=4),
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        padding=ft.padding.only(left=20, right=12, top=20, bottom=12),
+                                ft.Text("Admin Dashboard", size=24, weight=ft.FontWeight.BOLD, color=text_color),
+                                ft.Container(expand=True),
+                                ft.Row([
+                                    ft.Container(
+                                        content=ft.Icon(ft.Icons.HOME_OUTLINED, size=18, color="#FFFFFF"),
+                                        on_click=go_to_app,
+                                        bgcolor=primary_color,
+                                        width=36,
+                                        height=36,
+                                        border_radius=18,
+                                        alignment=ft.alignment.center,
+                                        tooltip="Go to main app",
+                                        ink=True,
+                                    ),
+                                    ft.Container(
+                                        content=ft.Icon(ft.Icons.LOGOUT_OUTLINED, size=18, color="#EF4444"),
+                                        on_click=sign_out,
+                                        width=36,
+                                        height=36,
+                                        border=ft.border.all(1.5, "#EF4444"),
+                                        border_radius=18,
+                                        alignment=ft.alignment.center,
+                                        tooltip="Sign Out",
+                                        ink=True,
+                                    ),
+                                ], spacing=8),
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.Text(
+                                f"Managing {total_users} users",
+                                size=13,
+                                color=muted_color,
+                            ),
+                        ], spacing=4),
+                        padding=ft.padding.only(left=20, right=20, top=16, bottom=12),
                     ),
                     
-                    # Stats Cards - minimalist style like main app
+                    # Stats Cards - minimalist style like main app with borders
                     ft.Container(
                         content=ft.Column([
                             ft.Row([
@@ -601,6 +658,7 @@ def AdminView(page: ft.Page, app_state):
                                         ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                                     ]),
                                     bgcolor=surface_color,
+                                    border=ft.border.all(1.5, primary_color),
                                     border_radius=12,
                                     padding=16,
                                     expand=True,
@@ -616,6 +674,7 @@ def AdminView(page: ft.Page, app_state):
                                         ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                                     ]),
                                     bgcolor=surface_color,
+                                    border=ft.border.all(1.5, "#10B981"),
                                     border_radius=12,
                                     padding=16,
                                     expand=True,
@@ -634,6 +693,7 @@ def AdminView(page: ft.Page, app_state):
                                         ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                                     ]),
                                     bgcolor=surface_color,
+                                    border=ft.border.all(1.5, "#8B5CF6"),
                                     border_radius=12,
                                     padding=16,
                                     expand=True,
@@ -641,7 +701,7 @@ def AdminView(page: ft.Page, app_state):
                                 # Active Users card (excluding admins)
                                 ft.Container(
                                     content=ft.Row([
-                                        ft.Icon(ft.Icons.PERSON_OUTLINED, size=20, color="#10B981"),
+                                        ft.Icon(ft.Icons.PERSON_OUTLINED, size=20, color="#F59E0B"),
                                         ft.Container(expand=True),
                                         ft.Column([
                                             ft.Text(str(active_users), size=20, weight=ft.FontWeight.BOLD, color=text_color),
@@ -649,6 +709,7 @@ def AdminView(page: ft.Page, app_state):
                                         ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.END),
                                     ]),
                                     bgcolor=surface_color,
+                                    border=ft.border.all(1.5, "#F59E0B"),
                                     border_radius=12,
                                     padding=16,
                                     expand=True,

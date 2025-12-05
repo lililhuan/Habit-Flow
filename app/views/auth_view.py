@@ -165,11 +165,11 @@ def SignUpView(page, app_state):
                         ft.Container(
                             content=ft.Column([
                                 ft.Container(
-                                    content=ft.Icon(ft.Icons.PERSON_ADD, size=32, color="#FFFFFF"),
-                                    width=60,
-                                    height=60,
+                                    content=ft.Icon(ft.Icons.PERSON_ADD, size=28, color="#FFFFFF"),
+                                    width=56,
+                                    height=56,
                                     bgcolor=border_color,
-                                    border_radius=16,
+                                    border_radius=14,
                                     alignment=ft.alignment.center,
                                 ),
                                 ft.Container(height=15),
@@ -223,18 +223,16 @@ def SignUpView(page, app_state):
                                 error_text,
                                 
                                 # Create Account button
-                                ft.ElevatedButton(
+                                ft.Container(
                                     content=ft.Row([
                                         ft.Icon(ft.Icons.PERSON_ADD, size=18, color="#FFFFFF"),
                                         ft.Text("Create Account", size=14, weight=ft.FontWeight.W_600, color="#FFFFFF"),
                                     ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
                                     bgcolor=border_color,
-                                    width=300,
                                     height=48,
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=12),
-                                    ),
+                                    border_radius=12,
                                     on_click=create_account,
+                                    ink=True,
                                 ),
                             ], spacing=4),
                             bgcolor=surface_color,
@@ -365,11 +363,11 @@ def SignInView(page, app_state):
                         ft.Container(
                             content=ft.Column([
                                 ft.Container(
-                                    content=ft.Icon(ft.Icons.LOGIN, size=32, color="#FFFFFF"),
-                                    width=60,
-                                    height=60,
+                                    content=ft.Icon(ft.Icons.LOGIN, size=28, color="#FFFFFF"),
+                                    width=56,
+                                    height=56,
                                     bgcolor=border_color,
-                                    border_radius=16,
+                                    border_radius=14,
                                     alignment=ft.alignment.center,
                                 ),
                                 ft.Container(height=15),
@@ -403,18 +401,16 @@ def SignInView(page, app_state):
                                 error_text,
                                 
                                 # Sign In button
-                                ft.ElevatedButton(
+                                ft.Container(
                                     content=ft.Row([
                                         ft.Icon(ft.Icons.LOGIN, size=18, color="#FFFFFF"),
                                         ft.Text("Sign In", size=14, weight=ft.FontWeight.W_600, color="#FFFFFF"),
                                     ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
                                     bgcolor=border_color,
-                                    width=300,
                                     height=48,
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=12),
-                                    ),
+                                    border_radius=12,
                                     on_click=sign_in,
+                                    ink=True,
                                 ),
                             ], spacing=4),
                             bgcolor=surface_color,

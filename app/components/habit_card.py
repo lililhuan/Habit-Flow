@@ -374,7 +374,6 @@ class HabitCard(ft.Container):
                     freq_row,
                     error_text,
                 ], spacing=6, tight=True),
-                width=300,
                 padding=ft.padding.only(top=5),
             ),
             actions=[
@@ -481,7 +480,6 @@ class HabitCard(ft.Container):
                         padding=15,
                     ),
                 ], spacing=10, tight=True),
-                width=300,
                 padding=ft.padding.only(top=5),
             ),
             actions=[
