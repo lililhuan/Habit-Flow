@@ -88,8 +88,32 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
     theme_grid = ft.Column(theme_rows, spacing=10)
     
     def sign_out(e):
-        """Sign out user"""
-        app_state.sign_out()
+        """Sign out user with confirmation dialog"""
+        current_scheme = DARK_SCHEMES[app_state.current_theme] if app_state.dark_mode else LIGHT_SCHEMES[app_state.current_theme]
+        dialog_bg = current_scheme.surface
+        dialog_text = current_scheme.on_surface
+        dialog_muted = "#9CA3AF" if app_state.dark_mode else "#6B7280"
+        
+        def confirm_logout(e):
+            page.close(dialog)
+            app_state.sign_out()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            bgcolor=dialog_bg,
+            title=ft.Text("Sign Out?", color=dialog_text, weight=ft.FontWeight.W_600),
+            content=ft.Text(
+                "Are you sure you want to sign out?",
+                color=dialog_muted,
+                size=14,
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
+                ft.TextButton("Sign Out", on_click=confirm_logout, style=ft.ButtonStyle(color="#EF4444")),
+            ],
+            shape=ft.RoundedRectangleBorder(radius=16),
+        )
+        page.open(dialog)
     
     def edit_profile(e):
         """Edit user email"""
@@ -290,7 +314,6 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                     ft.Container(height=5),
                     status_text,
                 ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                width=280,
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),
@@ -349,17 +372,42 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
         
         error_text = ft.Text("", color="#EF4444", size=12, visible=False)
         
-        # Password requirements
-        req_length = ft.Text("• At least 8 characters", size=11, color=dialog_muted)
-        req_number = ft.Text("• Contains a number", size=11, color=dialog_muted)
-        req_upper = ft.Text("• Contains uppercase letter", size=11, color=dialog_muted)
+        # Password requirements with icons (like auth view)
+        def create_req_row(text):
+            return ft.Row([
+                ft.Icon(ft.Icons.CIRCLE_OUTLINED, size=14, color=dialog_muted),
+                ft.Text(text, size=11, color=dialog_muted),
+            ], spacing=8)
+        
+        req_length = create_req_row("At least 8 characters")
+        req_number = create_req_row("Contains a number")
+        req_upper = create_req_row("Contains uppercase letter")
         
         def update_requirements(e):
             pw = new_pw_field.value or ""
-            req_length.color = current_scheme.primary if len(pw) >= 8 else dialog_muted
-            req_number.color = current_scheme.primary if any(c.isdigit() for c in pw) else dialog_muted
-            req_upper.color = current_scheme.primary if any(c.isupper() for c in pw) else dialog_muted
-            page.update()
+            success_color = "#10B981"  # Green for success
+            
+            # Length check
+            length_ok = len(pw) >= 8
+            req_length.controls[0].name = ft.Icons.CHECK_CIRCLE if length_ok else ft.Icons.CIRCLE_OUTLINED
+            req_length.controls[0].color = success_color if length_ok else dialog_muted
+            req_length.controls[1].color = success_color if length_ok else dialog_muted
+            
+            # Number check
+            number_ok = any(c.isdigit() for c in pw)
+            req_number.controls[0].name = ft.Icons.CHECK_CIRCLE if number_ok else ft.Icons.CIRCLE_OUTLINED
+            req_number.controls[0].color = success_color if number_ok else dialog_muted
+            req_number.controls[1].color = success_color if number_ok else dialog_muted
+            
+            # Uppercase check
+            upper_ok = any(c.isupper() for c in pw)
+            req_upper.controls[0].name = ft.Icons.CHECK_CIRCLE if upper_ok else ft.Icons.CIRCLE_OUTLINED
+            req_upper.controls[0].color = success_color if upper_ok else dialog_muted
+            req_upper.controls[1].color = success_color if upper_ok else dialog_muted
+            
+            req_length.update()
+            req_number.update()
+            req_upper.update()
         
         new_pw_field.on_change = update_requirements
         
@@ -481,7 +529,6 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                     export_text,
                 ], scroll=ft.ScrollMode.AUTO),
                 height=300,
-                width=400,
             ),
             actions=[
                 ft.TextButton("Copy", on_click=copy_to_clipboard, style=ft.ButtonStyle(color=current_scheme.primary)),
@@ -677,7 +724,6 @@ def SettingsView(page, app_state, scroll_to_appearance=False):
                     import_text,
                 ], scroll=ft.ScrollMode.AUTO),
                 height=300,
-                width=400,
             ),
             actions=[
                 ft.TextButton("Cancel", on_click=lambda e: page.close(dialog), style=ft.ButtonStyle(color=dialog_muted)),

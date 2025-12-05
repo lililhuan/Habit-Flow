@@ -53,17 +53,23 @@ class AddHabitDialog:
         # ═══════════════════════════════════════════════════════════════
         # AI CATEGORY DISPLAY
         # ═══════════════════════════════════════════════════════════════
-        self.category_icon = ft.Text("📌", size=24)
+        self.category_icon = ft.Text("📌", size=22)
         self.category_text = ft.Text(
             "Other",
-            size=14,
+            size=13,
             weight=ft.FontWeight.W_600,
             color=text_color,
+            no_wrap=False,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            max_lines=1,
         )
         self.confidence_text = ft.Text(
             "Type habit name for AI suggestion",
-            size=11,
+            size=10,
             color=muted_color,
+            no_wrap=False,
+            overflow=ft.TextOverflow.ELLIPSIS,
+            max_lines=1,
         )
         self.ai_badge = ft.Container(
             content=ft.Row([
@@ -80,26 +86,26 @@ class AddHabitDialog:
             content=ft.Row([
                 ft.Container(
                     content=self.category_icon,
-                    width=44,
-                    height=44,
+                    width=40,
+                    height=40,
                     bgcolor=ft.Colors.with_opacity(0.1, border_color),
-                    border_radius=12,
+                    border_radius=10,
                     alignment=ft.alignment.center,
                 ),
-                ft.Container(width=12),
+                ft.Container(width=10),
                 ft.Column([
                     ft.Row([
                         self.category_text,
-                        ft.Container(width=6),
+                        ft.Container(width=4),
                         self.ai_badge,
-                    ], spacing=0),
+                    ], spacing=0, wrap=True, tight=True),
                     self.confidence_text,
                 ], spacing=2, expand=True, alignment=ft.MainAxisAlignment.CENTER),
-            ], vertical_alignment=ft.CrossAxisAlignment.CENTER),
+            ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=0, expand=True),
             bgcolor=self.scheme.surface,
             border=ft.border.all(1.5, border_color),
-            border_radius=12,
-            padding=ft.padding.all(12),
+            border_radius=10,
+            padding=ft.padding.all(10),
         )
         
         # ═══════════════════════════════════════════════════════════════
@@ -140,7 +146,7 @@ class AddHabitDialog:
         self.custom_times_field = ft.TextField(
             value=str(self.custom_times_per_week),
             hint_text="1-7",
-            width=70,
+            width=60,
             text_align=ft.TextAlign.CENTER,
             keyboard_type=ft.KeyboardType.NUMBER,
             border_radius=10,
@@ -296,7 +302,6 @@ class AddHabitDialog:
                     spacing=6,
                     tight=True,
                 ),
-                width=320,
                 padding=ft.padding.only(top=5),
             ),
             actions=[
