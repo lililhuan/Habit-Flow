@@ -259,22 +259,22 @@ Habit-Flow/
 ## 📚 Documentation
 
 Full documentation is available in:
-- [`app/docs/README.md`](app/docs/README.md) — Project documentation, architecture, features, data model, team, reflections, etc.
+- [`app/docs/README.md`](docs/README.md) — Project documentation, architecture, features, data model, team, reflections, etc.
 
 For rubric compliance, place all required markdown files in `app/docs/`.
 
 | Document | Description |
 |----------|-------------|
-| [Project Overview & Problem Statement](app/docs/README.md#project-overview--problem-statement) | Problem, objectives |
-| [Feature List & Scope Table](app/docs/README.md#feature-list--scope-table) | Features in/out of scope |
-| [Architecture Diagram](app/docs/README.md#architecture-diagram) | System architecture |
-| [Data Model (ERD)](app/docs/README.md#data-model) | Database schema |
-| [Emerging Tech (AI)](app/docs/README.md#emerging-tech-explanation-ai-categorization) | AI categorization |
-| [Setup Instructions](app/docs/README.md#setup--run-instructions) | How to install/run |
-| [Testing Summary](app/docs/README.md#testing-summary) | Test plan, coverage |
-| [Team Contributions](app/docs/README.md#team-roles--contribution-matrix) | Roles, matrix |
-| [Future Enhancements](app/docs/README.md#risk--constraint-notes--future-enhancements) | Risks, future work |
-| [Individual Reflection](app/docs/README.md#individual-reflection) | Team reflections |
+| [Project Overview & Problem Statement](docs/README.md#project-overview--problem-statement) | Problem, objectives |
+| [Feature List & Scope Table](docs/README.md#feature-list--scope-table) | Features in/out of scope |
+| [Architecture Diagram](docs/README.md#architecture-diagram) | System architecture |
+| [Data Model (ERD)](docs/README.md#data-model) | Database schema |
+| [Emerging Tech (AI)](docs/README.md#emerging-tech-explanation-ai-categorization) | AI categorization |
+| [Setup Instructions](docs/README.md#setup--run-instructions) | How to install/run |
+| [Testing Summary](docs/README.md#testing-summary) | Test plan, coverage |
+| [Team Contributions](docs/README.md#team-roles--contribution-matrix) | Roles, matrix |
+| [Future Enhancements](docs/README.md#risk--constraint-notes--future-enhancements) | Risks, future work |
+| [Individual Reflection](docs/README.md#individual-reflection) | Team reflections |
 
 ---
 
