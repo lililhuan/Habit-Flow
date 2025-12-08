@@ -2,11 +2,10 @@
 
 **Track your habits. Stay consistent. Build a better you.**
 
-HabitFlow is a mobile-first habit tracking application built with Flet (Python).
+HabitFlow is a mobile habit tracking application built with Flet (Python) to help users build  their consistent habits and track their progress
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flet](https://img.shields.io/badge/Flet-0.23+-green.svg)
-
 
 ---
 
@@ -14,10 +13,13 @@ HabitFlow is a mobile-first habit tracking application built with Flet (Python).
 
 - [Features](#-features)
 - [Security Features](#-security-features)
+- [AI Categorization](#-ai-categorization-emerging-tech)
 - [Installation](#-installation)
 - [Usage](#-usage)
+- [Running Tests](#-running-tests)
 - [Project Structure](#-project-structure)
 - [Technology Stack](#-technology-stack)
+- [Documentation](#-documentation)
 - [Team Members](#-team-members)
 
 ---
@@ -65,6 +67,36 @@ HabitFlow is a mobile-first habit tracking application built with Flet (Python).
 - 🔒 Local SQLite database (no cloud transmission)
 - 🔒 Thread-safe database connections
 - 🔒 Input validation and sanitization
+
+---
+
+## 🤖 AI Categorization (Emerging Tech)
+
+HabitFlow uses **AI-powered automatic categorization** to organize your habits intelligently.
+
+### How It Works
+1. User types habit name (e.g., "Go to gym")
+2. AI analyzes keywords and patterns
+3. Category is auto-suggested (e.g., "🏃 Fitness")
+4. User can accept or change the suggestion
+
+### Supported Categories
+| Category | Example Habits |
+|----------|----------------|
+| 🏃 **Fitness** | Go to gym, Run 5km, Workout |
+| 📚 **Education** | Read a book, Study Python, Learn Spanish |
+| 🧘 **Mindfulness** | Meditate, Practice gratitude, Deep breathing |
+| 💼 **Work** | Finish report, Email clients, Update resume |
+| 🥗 **Health** | Drink water, Take vitamins, Sleep 8 hours |
+| 👥 **Social** | Call mom, Meet friends, Text family |
+| 💰 **Finance** | Save money, Track expenses, Review budget |
+| 🎨 **Other** | Default for unrecognized habits |
+
+### Implementation
+- **Rule-based pattern matching** with keyword dictionaries
+- **Regex patterns** for flexible matching
+- **Confidence scoring** for accuracy
+- **Fallback category** for unrecognized habits
 
 ---
 
@@ -120,6 +152,32 @@ HabitFlow is a mobile-first habit tracking application built with Flet (Python).
 ### Admin Access
 - Admin emails are configured in the app
 - Admins can: view all users, disable accounts, view security logs
+
+---
+
+## 🧪 Running Tests
+
+HabitFlow includes **62 unit tests** with ~88% code coverage.
+
+### Run All Tests
+```bash
+# From project root
+pytest
+
+# With verbose output
+pytest -v
+
+# With coverage report
+pytest --cov=app --cov-report=term-missing
+```
+
+### Test Files
+| File | Tests | Coverage |
+|------|-------|----------|
+| `test_auth_service.py` | 15 | Authentication, password hashing |
+| `test_database.py` | 12 | CRUD operations, constraints |
+| `test_habit_service.py` | 20 | Habit management, AI categorization |
+| `test_analytics_service.py` | 15 | Statistics, streaks |
 
 ---
 
@@ -198,13 +256,68 @@ Habit-Flow/
 
 ---
 
+## 📚 Documentation
+
+Full documentation is available in:
+- [`app/docs/README.md`](app/docs/README.md) — Project documentation, architecture, features, data model, team, reflections, etc.
+
+For rubric compliance, place all required markdown files in `app/docs/`.
+
+| Document | Description |
+|----------|-------------|
+| [Project Overview & Problem Statement](app/docs/README.md#project-overview--problem-statement) | Problem, objectives |
+| [Feature List & Scope Table](app/docs/README.md#feature-list--scope-table) | Features in/out of scope |
+| [Architecture Diagram](app/docs/README.md#architecture-diagram) | System architecture |
+| [Data Model (ERD)](app/docs/README.md#data-model) | Database schema |
+| [Emerging Tech (AI)](app/docs/README.md#emerging-tech-explanation-ai-categorization) | AI categorization |
+| [Setup Instructions](app/docs/README.md#setup--run-instructions) | How to install/run |
+| [Testing Summary](app/docs/README.md#testing-summary) | Test plan, coverage |
+| [Team Contributions](app/docs/README.md#team-roles--contribution-matrix) | Roles, matrix |
+| [Future Enhancements](app/docs/README.md#risk--constraint-notes--future-enhancements) | Risks, future work |
+| [Individual Reflection](app/docs/README.md#individual-reflection) | Team reflections |
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Clone
+git clone https://github.com/lililhuan/Habit-Flow.git
+cd Habit-Flow
+
+# 2. Install
+pip install -r requirements.txt
+
+# 3. Run
+flet run main.py
+
+# 4. Test
+pytest -v
+```
+
+---
+
 ## 👥 Team Members
 
 | Name | Role | GitHub |
 |------|------|--------|
-| **Roinel (lililhuan)** | Lead Developer | [@lililhuan](https://github.com/lililhuan) |
-| **Justine Aaron** | Developer | [@JustineAaron](https://github.com/JustineAaron) |
-| **Titojek** | Developer | [@titojek](https://github.com/titojek) |
+| **Roinel James LLesis** | Lead Developer | [@lililhuan](https://github.com/lililhuan) |
+| **Jeric Romance** | Developer | [@titojek](https://github.com/titojek) |
+| **Justine Aaron Sarcauga** | Developer | [@JustineAaron](https://github.com/JustineAaron) |
+
+---
+
+## 📄 License
+
+This project is developed as an academic project for **Application Development**, **Information Assurance**, and **Software Engineering courses** at **Camarines Sur Polytechnic Colleges**.
+
+---
+
+## 🙏 Acknowledgments
+
+- [Flet](https://flet.dev/) - Cross-platform UI framework
+- [bcrypt](https://github.com/pyca/bcrypt/) - Password hashing library
+- [pytest](https://pytest.org/) - Testing framework
 
 ---
 
