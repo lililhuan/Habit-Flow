@@ -308,12 +308,14 @@ this launches the app in a development enviroment so it can be tested or debug b
 
 ### 1.1 Welcome Screen
 ![Welcome Screen](../docs/screenshots/01_welcome_view.png)
+
 From the welcome screen you can:
 - Read the key features: Daily Tracking, Streak Building, Progress Analytics.
 - Tap **Create Account** to register, or **Sign In** if you already have an account.
 
 ### 1.2 Creating an Account
 ![Create Account](../docs/screenshots/02_create_account.png)
+
 Steps:
 - Enter a valid email address.
 - Create and confirm your password.
@@ -322,6 +324,7 @@ Steps:
 
 ### 1.3 Signing In
 ![Sign In](../docs/screenshots/03_sign_in.png)
+
 Steps:
 - Enter the email and password you used at registration.
 - Tap **Sign In** to open your HabitFlow dashboard.
@@ -329,6 +332,7 @@ Steps:
 
 ## 2. Main Navigation
 ![Main Navigation](../docs/screenshots/04_habits_view.png)
+
 The bottom navigation bar contains:
 - **Habits** – manage all your habits.
 - **Today** – view and complete today’s habits.
@@ -340,11 +344,13 @@ The bottom navigation bar contains:
 
 ### 3.1 Managing Habits
 ![Manage Habits](../docs/screenshots/04_habits_view.png)
+
 - Tap **Add Habit** or **Add Your First Habit** to create a new habit.
 - Use the list to review existing habits and open them for editing or deletion.
 
 ### 3.2 Adding a New Habit
 ![Add Habit](../docs/screenshots/06_add_habit.png)
+
 Steps:
 - Enter the Habit Name.
 - Check the Category (AI) field; HabitFlow will suggest a category automatically based on the name, but you can change it manually.
@@ -354,12 +360,14 @@ Steps:
 
 ### 3.3 Today View & Daily Tracking
 ![Today View](../docs/screenshots/05_today-view.png)
+
 - The Today tab shows all habits scheduled for the selected date.
 - Tap the checkbox on a habit card to mark it as complete.
 - The progress bar and percentage at the top update automatically as you complete habits.
 
 ### 3.4 Analytics
 ![Analytics](../docs/screenshots/07_analytics_view.png)
+
 The Stats tab shows:
 - Total habits and total completions.
 - Average completion rate and best streak.
@@ -369,6 +377,7 @@ The Stats tab shows:
 
 ### 4.1 Account Settings
 ![Account Settings](../docs/screenshots/08_settings_account.png)
+
 From **Settings → Account** you can:
 - View your email address.
 - Sign out of your account.
@@ -376,6 +385,7 @@ From **Settings → Account** you can:
 
 ### 4.2 Themes and Appearance
 ![Themes](../docs/screenshots/09_settings_theme.png)
+
 From **Settings → Appearance** you can:
 - Toggle Dark / Light Mode.
 - Choose from multiple theme colors like Ocean Blue, Forest Green, Purple Dream, and more.
@@ -383,6 +393,7 @@ From **Settings → Appearance** you can:
 
 ### 4.3 Data Management
 ![Data Management](../docs/screenshots/10_settings_data_management.png)
+
 From **Settings → Data Management** you can:
 - **Export Data** – download your habits and progress to a JSON file for backup.
 - **Import Data** – restore from a previously exported backup.
@@ -391,6 +402,7 @@ From **Settings → Data Management** you can:
 
 ### 4.4 About & Storage Information
 ![About](../docs/screenshots/11_settings_about.png)
+
 The About section shows:
 - App version.
 - Short description of HabitFlow.
@@ -400,6 +412,7 @@ The About section shows:
 
 ### 5.1 User Management
 ![Admin Users](../docs/screenshots/12_admin_dashboard_users.png)
+
 The Users tab in the Admin Dashboard lets administrators:
 - View all registered users with their email and basic stats (for example, number of habits).
 - See which accounts are marked as ADMIN.
@@ -407,6 +420,7 @@ The Users tab in the Admin Dashboard lets administrators:
 
 ### 5.2 Activity Monitoring
 ![Admin Activity](../docs/screenshots/13_admin_dashboard_activity.png)
+
 The Activity tab shows recent login activity:
 - A list of login events with email address and timestamp.
 - A quick status label such as Success for successful logins.
@@ -414,6 +428,7 @@ The Activity tab shows recent login activity:
 
 ### 5.3 Security Logs
 ![Admin Logs](../docs/screenshots/14_admin_dashboard_logs.png)
+
 The Logs tab shows security-related events, such as:
 - Successful logins, logouts, and sign‑ups.
 - Failed login attempts that may indicate incorrect passwords or attempted brute‑force attacks.
@@ -434,6 +449,8 @@ Good practices:
 - Set realistic frequencies (daily or a few times per week) instead of “perfect” schedules you can’t maintain.
 - Check the Today view at a consistent time each day—morning or evening—to mark completions and review progress.
 - Use the Stats tab weekly to see which areas you’re improving in and which ones need attention.
+
+---
 
 ## 🧪Testing Summary
 HabitFlow uses an automated test suite built with pytest and pytest-cov and manual testing of the mobile user interface. The automated tests are used to test the core business logic of authentication, database operations, habit management and analytics using an in-memory SQLite database in a manner that is isolated and repeatable.​
