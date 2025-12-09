@@ -7,6 +7,7 @@
 - [Data Model (ERD / JSON Overview)](#data-model)
 - [Emerging Tech Explanation (AI Categorization) ](#-emerging-tech-explanation-ai-categorization)
 - [Setup & Run Instructions](#setup--run-instructions)
+- [User Manual](#habitflow-user-manual)
 - [Testing Summary](#testing-summary)
 - [Team Roles & Contribution Matrix](#-team-roles--contribution-matrix)
 - [Risk / Constraint Notes & Future Enhancements](#risk--constraint-notes--future-enhancements)
