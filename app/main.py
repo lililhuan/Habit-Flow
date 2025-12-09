@@ -45,6 +45,7 @@ def main(page: ft.Page):
     auto_logged_in = app_state.try_auto_login()
     
     # Define routes
+
     def route_change(route):
         page.views.clear()
         
@@ -131,4 +132,4 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.app(target=main) 
+    ft.app(target=main)

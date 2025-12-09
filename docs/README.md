@@ -39,80 +39,7 @@ The primary objectives of the project are to deliver easy habit creation and tra
 
 ## 🏗️ Architecture Diagram
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              HABITFLOW ARCHITECTURE                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            PRESENTATION LAYER                                │
-│                              (Flet Framework)                                │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        │
-│  │  Welcome     │ │  Auth Views  │ │  Main Views  │ │  Admin View  │        │
-│  │    View      │ │  SignUp/In   │ │ Today/Stats  │ │  Dashboard   │        │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘        │
-│  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │                    Reusable Components                           │       │
-│  │         (HabitCard, BottomNav, AddHabitDialog)                   │       │
-│  └──────────────────────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            STATE MANAGEMENT                                  │
-│  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │                         AppState                                  │       │
-│  │    • Current User    • Theme Settings    • Navigation State      │       │
-│  │    • Service Refs    • Dark Mode         • Session Data          │       │
-│  └──────────────────────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            BUSINESS LOGIC LAYER                              │
-│                               (Services)                                     │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐                   │
-│  │  AuthService   │ │  HabitService  │ │AnalyticsService│                   │
-│  │  • signup()    │ │  • create()    │ │ • streaks()    │                   │
-│  │  • signin()    │ │  • toggle()    │ │ • rates()      │                   │
-│  │  • validate()  │ │  • delete()    │ │ • patterns()   │                   │
-│  └────────────────┘ └────────────────┘ └────────────────┘                   │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐                   │
-│  │ ExportService  │ │SecurityLogger  │ │ AICategorizer  │ ◄── Emerging Tech │
-│  │  • export()    │ │  • log()       │ │ • categorize() │                   │
-│  │  • import()    │ │  • audit()     │ │ • suggest()    │                   │
-│  └────────────────┘ └────────────────┘ └────────────────┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                      │
-                                      ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              DATA LAYER                                      │
-│  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │                         Database Class                            │       │
-│  │    • Thread-safe connections    • CRUD operations                 │       │
-│  │    • Parameterized queries      • Migration support               │       │
-│  └──────────────────────────────────────────────────────────────────┘       │
-│                                      │                                       │
-│                                      ▼                                       │
-│  ┌──────────────────────────────────────────────────────────────────┐       │
-│  │                      SQLite Database                              │       │
-│  │                      (habitflow.db)                               │       │
-│  │    Tables: users, habits, completions, user_settings,            │       │
-│  │            login_history                                          │       │
-│  └──────────────────────────────────────────────────────────────────┘       │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           SECURITY LAYER                                     │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐                   │
-│  │ bcrypt Hashing │ │ Account Lockout│ │ Session Mgmt   │                   │
-│  │  • Password    │ │  • 5 attempts  │ │  • Timeout     │                   │
-│  │  • Salt        │ │  • 15 min lock │ │  • Auto-logout │                   │
-│  └────────────────┘ └────────────────┘ └────────────────┘                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
+![alt text](Architecture_Diagram.png)
 
 ## 📁 Folder Structure
 
@@ -188,62 +115,7 @@ Habit-Flow/
 
 ### 📊 Entity Relationship Diagram (ERD)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           DATABASE: habitflow.db                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────┐       ┌──────────────────────┐
-│        USERS         │       │    USER_SETTINGS     │
-├──────────────────────┤       ├──────────────────────┤
-│ PK  id (INTEGER)     │───┐   │ PK  id (INTEGER)     │
-│     email (TEXT)     │   │   │ FK  user_id (INT)    │◄──┐
-│     password_hash    │   │   │     theme (TEXT)     │   │
-│     created_at       │   │   │     dark_mode (BOOL) │   │
-└──────────────────────┘   │   │     notifications    │   │
-           │               │   └──────────────────────┘   │
-           │               │                              │
-           │               │   ┌──────────────────────┐   │
-           │               │   │    LOGIN_HISTORY     │   │
-           │               │   ├──────────────────────┤   │
-           │               │   │ PK  id (INTEGER)     │   │
-           │               │   │ FK  user_id (INT)    │◄──┤
-           │               │   │     login_time       │   │
-           │               │   │     success (BOOL)   │   │
-           │               │   │     ip_address       │   │
-           │               │   └──────────────────────┘   │
-           │               │                              │
-           ▼               │   ┌──────────────────────┐   │
-┌──────────────────────┐   │   │      SESSIONS        │   │
-│        HABITS        │   │   ├──────────────────────┤   │
-├──────────────────────┤   │   │ PK  id (INTEGER)     │   │
-│ PK  id (INTEGER)     │   │   │ FK  user_id (INT)    │◄──┤
-│ FK  user_id (INT)    │◄──┴───│     last_login       │   │
-│     name (TEXT)      │       └──────────────────────┘   │
-│     frequency (TEXT) │                                  │
-│     start_date (DATE)│──────────────────────────────────┘
-│     color (TEXT)     │
-│     icon (TEXT)      │
-│     category (TEXT)  │
-│     is_archived      │
-│     created_at       │
-└──────────────────────┘
-           │
-           │ 1:N
-           ▼
-┌──────────────────────┐
-│     COMPLETIONS      │
-├──────────────────────┤
-│ PK  id (INTEGER)     │
-│ FK  habit_id (INT)   │
-│     completion_date  │
-│     completed (BOOL) │
-│     notes (TEXT)     │
-│     created_at       │
-└──────────────────────┘
-```
-
----
+![alt text](ERD.png)
 
 ## 📋 Table Definitions
 
@@ -429,6 +301,139 @@ this launches the app in a development enviroment so it can be tested or debug b
 - If Python is not recognized, ensure it is added to your system PATH.
 
 ---
+
+# HabitFlow User Manual
+
+## 1. Getting Started
+
+### 1.1 Welcome Screen
+![Welcome Screen](../docs/screenshots/01_welcome_view.png)
+From the welcome screen you can:
+- Read the key features: Daily Tracking, Streak Building, Progress Analytics.
+- Tap **Create Account** to register, or **Sign In** if you already have an account.
+
+### 1.2 Creating an Account
+![Create Account](../docs/screenshots/02_create_account.png)
+Steps:
+- Enter a valid email address.
+- Create and confirm your password.
+- Make sure the password meets the requirements shown on screen (length and complexity).
+- Tap **Create Account** to finish registration.
+
+### 1.3 Signing In
+![Sign In](../docs/screenshots/03_sign_in.png)
+Steps:
+- Enter the email and password you used at registration.
+- Tap **Sign In** to open your HabitFlow dashboard.
+- If you enter the wrong password too many times, your account may be temporarily locked as a security measure.
+
+## 2. Main Navigation
+![Main Navigation](../docs/screenshots/04_habits_view.png)
+The bottom navigation bar contains:
+- **Habits** – manage all your habits.
+- **Today** – view and complete today’s habits.
+- **Add (+)** – quickly add a new habit.
+- **Stats** – see analytics and streaks.
+- **Settings** – manage account, appearance, and data.
+
+## 3. Core Features
+
+### 3.1 Managing Habits
+![Manage Habits](../docs/screenshots/04_habits_view.png)
+- Tap **Add Habit** or **Add Your First Habit** to create a new habit.
+- Use the list to review existing habits and open them for editing or deletion.
+
+### 3.2 Adding a New Habit
+![Add Habit](../docs/screenshots/06_add_habit.png)
+Steps:
+- Enter the Habit Name.
+- Check the Category (AI) field; HabitFlow will suggest a category automatically based on the name, but you can change it manually.
+- Choose a Frequency (Daily, Weekly, or Custom).
+- Set the Start Date.
+- Tap **Create Habit**.
+
+### 3.3 Today View & Daily Tracking
+![Today View](../docs/screenshots/05_today-view.png)
+- The Today tab shows all habits scheduled for the selected date.
+- Tap the checkbox on a habit card to mark it as complete.
+- The progress bar and percentage at the top update automatically as you complete habits.
+
+### 3.4 Analytics
+![Analytics](../docs/screenshots/07_analytics_view.png)
+The Stats tab shows:
+- Total habits and total completions.
+- Average completion rate and best streak.
+- Weekly progress chart and habit performance summaries.
+
+## 4. Settings & Personalization
+
+### 4.1 Account Settings
+![Account Settings](../docs/screenshots/08_settings_account.png)
+From **Settings → Account** you can:
+- View your email address.
+- Sign out of your account.
+- Change your password to keep your account secure.
+
+### 4.2 Themes and Appearance
+![Themes](../docs/screenshots/09_settings_theme.png)
+From **Settings → Appearance** you can:
+- Toggle Dark / Light Mode.
+- Choose from multiple theme colors like Ocean Blue, Forest Green, Purple Dream, and more.
+- See a live preview when a theme is applied successfully.
+
+### 4.3 Data Management
+![Data Management](../docs/screenshots/10_settings_data_management.png)
+From **Settings → Data Management** you can:
+- **Export Data** – download your habits and progress to a JSON file for backup.
+- **Import Data** – restore from a previously exported backup.
+- **Reset All Data** – remove all habits and completions but keep your account.
+- **Delete Account** – permanently delete your account and all stored data.
+
+### 4.4 About & Storage Information
+![About](../docs/screenshots/11_settings_about.png)
+The About section shows:
+- App version.
+- Short description of HabitFlow.
+- Storage summary (total habits/completions, storage location = Local Device).
+
+## 5. Admin Dashboard (for Admin Accounts)
+
+### 5.1 User Management
+![Admin Users](../docs/screenshots/12_admin_dashboard_users.png)
+The Users tab in the Admin Dashboard lets administrators:
+- View all registered users with their email and basic stats (for example, number of habits).
+- See which accounts are marked as ADMIN.
+- Perform actions such as view-only, disable, or delete a user account depending on what controls your build exposes.
+
+### 5.2 Activity Monitoring
+![Admin Activity](../docs/screenshots/13_admin_dashboard_activity.png)
+The Activity tab shows recent login activity:
+- A list of login events with email address and timestamp.
+- A quick status label such as Success for successful logins.
+- This view helps admins monitor whether accounts are being accessed as expected and supports manual security reviews.
+
+### 5.3 Security Logs
+![Admin Logs](../docs/screenshots/14_admin_dashboard_logs.png)
+The Logs tab shows security-related events, such as:
+- Successful logins, logouts, and sign‑ups.
+- Failed login attempts that may indicate incorrect passwords or attempted brute‑force attacks.
+- Each entry includes the event type, email, and timestamp, and can optionally be exported for auditing.
+
+## 6. Security Features (User View)
+Even though most security logic is behind the scenes, users should be aware of:
+- **Password protection** – All passwords are stored as secure bcrypt hashes; plain text passwords are never saved.
+- **Account lockout** – After several incorrect password attempts, the account may temporarily lock to protect against guessing attacks.
+- **Local data storage** – All habits and progress are stored locally on the device; exporting and backing up data is under the user’s control.
+
+Good practices:
+- Use strong, unique passwords for HabitFlow.
+- Regularly export your data if you plan to change or reset your device.
+
+## 7. Tips for Effective Habit Tracking
+- Start with a small number of habits (3–5) so you don’t feel overwhelmed.
+- Set realistic frequencies (daily or a few times per week) instead of “perfect” schedules you can’t maintain.
+- Check the Today view at a consistent time each day—morning or evening—to mark completions and review progress.
+- Use the Stats tab weekly to see which areas you’re improving in and which ones need attention.
 
 ## 🧪Testing Summary
 HabitFlow uses an automated test suite built with pytest and pytest-cov and manual testing of the mobile user interface. The automated tests are used to test the core business logic of authentication, database operations, habit management and analytics using an in-memory SQLite database in a manner that is isolated and repeatable.​

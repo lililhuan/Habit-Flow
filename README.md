@@ -258,25 +258,28 @@ Habit-Flow/
 
 ## 📚 Documentation
 
-Full documentation is available in:
-- [`app/docs/README.md`](docs/README.md) — Project documentation, architecture, features, data model, team, reflections, etc.
 
-For rubric compliance, place all required markdown files in `app/docs/`.
+Full documentation and Info Assurance report are available in:
+- [`docs/PDF/`](docs/PDF/) — Project report, Info Assurance documentation, and PDF deliverables
+- [`docs/README.md`](docs/README.md) — Markdown documentation, architecture, features, data model, team, reflections, etc.
+- [`docs/screenshots`](docs/screenshots) — screenshot of UI
 
+### Key Documentation Files
 | Document | Description |
 |----------|-------------|
 | [Project Overview & Problem Statement](docs/README.md#project-overview--problem-statement) | Problem, objectives |
 | [Feature List & Scope Table](docs/README.md#feature-list--scope-table) | Features in/out of scope |
-| [Architecture Diagram](docs/README.md#architecture-diagram) | System architecture |
-| [Data Model (ERD)](docs/README.md#data-model) | Database schema |
-| [Emerging Tech (AI)](docs/README.md#emerging-tech-explanation-ai-categorization) | AI categorization |
-| [Setup Instructions](docs/README.md#setup--run-instructions) | How to install/run |
+| [Architecture Diagram](docs/Architecture_Diagram.png) | System architecture (PNG) |
+| [Database ERD](docs/ERD.png) | Database schema (PNG) |
+| [User Manual](docs/README.md#habitflow-user-manual) | Feauture guides for regular user and admin user |
 | [Testing Summary](docs/README.md#testing-summary) | Test plan, coverage |
 | [Team Contributions](docs/README.md#team-roles--contribution-matrix) | Roles, matrix |
 | [Future Enhancements](docs/README.md#risk--constraint-notes--future-enhancements) | Risks, future work |
 | [Individual Reflection](docs/README.md#individual-reflection) | Team reflections |
 
 ---
+
+
 
 ## 🚀 Quick Start
 
